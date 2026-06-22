@@ -1,1 +1,5 @@
 /target
+REVIEW.md
+docs/
+*.plan.md
+*.todo.md
