@@ -1,0 +1,25 @@
+{
+  "name": "od-cli-scanner",
+  "version": "0.1.0",
+  "description": "CLI agent detection engine — detect installed AI coding agents",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "*.node"
+  ],
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": ["cli", "agent", "scanner", "ai", "detection"],
+  "author": "Open Design Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nexu-io/od-cli-scanner.git"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

@@ -1,0 +1,28 @@
+[package]
+name = "od-cli-scanner"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "CLI agent detection engine — Rust-native scanner for AI coding agents"
+keywords = ["cli", "agent", "scanner", "ai", "detection"]
+categories = ["command-line-utilities", "development-tools"]
+
+[lib]
+name = "od_cli_scanner"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+clap = { version = "4", features = ["derive"] }
+futures = "0.3"
+which = "6"
+dirs = "5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+csv = "1"

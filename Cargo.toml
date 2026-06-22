@@ -1,0 +1,14 @@
+[workspace]
+members = [
+    "crates/od-cli-scanner",
+    "crates/napi",
+    "crates/od-scan",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Open Design Contributors"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/nexu-io/od-cli-scanner"

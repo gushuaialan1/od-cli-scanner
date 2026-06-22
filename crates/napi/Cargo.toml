@@ -1,0 +1,19 @@
+[package]
+name = "od-cli-scanner-napi"
+version.workspace = true
+authors.workspace = true
+edition = "2021"
+license.workspace = true
+repository.workspace = true
+description = "Node.js bindings for od-cli-scanner via napi-rs"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "2", features = ["napi8", "tokio_rt"] }
+napi-derive = "2"
+od-cli-scanner = { path = "../od-cli-scanner" }
+
+[build-dependencies]
+napi-build = "2"

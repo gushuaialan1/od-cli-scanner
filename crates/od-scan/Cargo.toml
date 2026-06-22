@@ -1,0 +1,20 @@
+[package]
+name = "od-scan"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "CLI binary for od-cli-scanner"
+
+[[bin]]
+name = "od-scan"
+path = "src/main.rs"
+
+[dependencies]
+od-cli-scanner = { path = "../od-cli-scanner" }
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde_json = "1"
