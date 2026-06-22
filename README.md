@@ -155,9 +155,19 @@ cargo run -- scan --pretty
 - [ ] More built-in agents (Cursor, Gemini, Qwen, etc.)
 - [ ] WASM target for browser usage
 
+## Acknowledgments
+
+This project was inspired by and built upon the agent detection system from [**Open Design**](https://github.com/nexu-io/open-design) by [nexu-io](https://github.com/nexu-io). The built-in agent definitions, version probing strategies, and stream format mappings are derived from their comprehensive TypeScript runtime registry.
+
 ## License
 
 MIT — see [LICENSE](LICENSE)
+
+---
+
+## 致谢
+
+本项目受到 [**Open Design**](https://github.com/nexu-io/open-design)（由 [nexu-io](https://github.com/nexu-io) 开发）的启发并基于其构建。内置的 Agent 定义、版本探测策略和流格式映射均源自其全面的 TypeScript 运行时注册表。
 
 ---
 
