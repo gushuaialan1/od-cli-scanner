@@ -41,19 +41,15 @@ async fn main() {
 
     // Setup tracing
     let filter = if cli.verbose { "debug" } else { "info" };
-    tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .init();
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
     info!("Starting od-scan");
 
     // Load agent definitions
     let defs = if let Some(config_path) = cli.config {
         info!("Loading config from {:?}", config_path);
-        let content = std::fs::read_to_string(&config_path)
-            .expect("Failed to read config file");
-        serde_json::from_str::<Vec<AgentDef>>(&content)
-            .expect("Invalid config JSON")
+        let content = std::fs::read_to_string(&config_path).expect("Failed to read config file");
+        serde_json::from_str::<Vec<AgentDef>>(&content).expect("Invalid config JSON")
     } else {
         // Default built-in definitions
         get_default_defs()
@@ -86,7 +82,10 @@ async fn main() {
             println!("{}", output);
         }
         "table" => {
-            println!("{:<12} {:<20} {:<10} {}", "ID", "Name", "Available", "Version");
+            println!(
+                "{:<12} {:<20} {:<10} {}",
+                "ID", "Name", "Available", "Version"
+            );
             println!("{}", "-".repeat(60));
             for agent in &agents {
                 println!(
@@ -117,12 +116,10 @@ fn get_default_defs() -> Vec<AgentDef> {
             fallback_bins: vec!["claude-code".to_string()],
             version_args: vec!["--version".to_string()],
             version_probe_timeout_ms: 3000,
-            fallback_models: vec![
-                od_cli_scanner::core::types::ModelOption {
-                    id: "claude-sonnet-4-20250514".to_string(),
-                    label: "Claude Sonnet 4".to_string(),
-                },
-            ],
+            fallback_models: vec![od_cli_scanner::core::types::ModelOption {
+                id: "claude-sonnet-4-20250514".to_string(),
+                label: "Claude Sonnet 4".to_string(),
+            }],
             stream_format: "anthropic".to_string(),
             install_url: Some("https://docs.anthropic.com/claude-code".to_string()),
             docs_url: Some("https://docs.anthropic.com/claude-code".to_string()),
@@ -575,12 +572,10 @@ fn get_default_defs() -> Vec<AgentDef> {
             fallback_bins: vec![],
             version_args: vec!["--version".to_string()],
             version_probe_timeout_ms: 3000,
-            fallback_models: vec![
-                od_cli_scanner::core::types::ModelOption {
-                    id: "default".to_string(),
-                    label: "Default".to_string(),
-                },
-            ],
+            fallback_models: vec![od_cli_scanner::core::types::ModelOption {
+                id: "default".to_string(),
+                label: "Default".to_string(),
+            }],
             stream_format: "json-event-stream".to_string(),
             install_url: None,
             docs_url: None,
@@ -703,12 +698,10 @@ fn get_default_defs() -> Vec<AgentDef> {
             fallback_bins: vec![],
             version_args: vec!["--version".to_string()],
             version_probe_timeout_ms: 3000,
-            fallback_models: vec![
-                od_cli_scanner::core::types::ModelOption {
-                    id: "default".to_string(),
-                    label: "Default".to_string(),
-                },
-            ],
+            fallback_models: vec![od_cli_scanner::core::types::ModelOption {
+                id: "default".to_string(),
+                label: "Default".to_string(),
+            }],
             stream_format: "json-event-stream".to_string(),
             install_url: None,
             docs_url: None,
@@ -726,12 +719,10 @@ fn get_default_defs() -> Vec<AgentDef> {
             fallback_bins: vec![],
             version_args: vec!["--version".to_string()],
             version_probe_timeout_ms: 3000,
-            fallback_models: vec![
-                od_cli_scanner::core::types::ModelOption {
-                    id: "default".to_string(),
-                    label: "Default".to_string(),
-                },
-            ],
+            fallback_models: vec![od_cli_scanner::core::types::ModelOption {
+                id: "default".to_string(),
+                label: "Default".to_string(),
+            }],
             stream_format: "json-event-stream".to_string(),
             install_url: None,
             docs_url: None,
@@ -749,12 +740,10 @@ fn get_default_defs() -> Vec<AgentDef> {
             fallback_bins: vec![],
             version_args: vec!["--version".to_string()],
             version_probe_timeout_ms: 3000,
-            fallback_models: vec![
-                od_cli_scanner::core::types::ModelOption {
-                    id: "default".to_string(),
-                    label: "Default".to_string(),
-                },
-            ],
+            fallback_models: vec![od_cli_scanner::core::types::ModelOption {
+                id: "default".to_string(),
+                label: "Default".to_string(),
+            }],
             stream_format: "acp-json-rpc".to_string(),
             install_url: None,
             docs_url: None,

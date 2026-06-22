@@ -1,7 +1,7 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use od_cli_scanner::core::types::*;
 use od_cli_scanner::core::detector::detect_agents;
+use od_cli_scanner::core::types::*;
 use std::collections::HashMap;
 
 // ─── Re-export types with napi derive ───────────────────────────────
@@ -86,7 +86,10 @@ pub struct JsAgentDef {
 
 impl From<ModelOption> for JsModelOption {
     fn from(m: ModelOption) -> Self {
-        Self { id: m.id, label: m.label }
+        Self {
+            id: m.id,
+            label: m.label,
+        }
     }
 }
 
@@ -111,7 +114,10 @@ impl From<ModelsSource> for JsModelsSource {
 
 impl From<FixAction> for JsFixAction {
     fn from(f: FixAction) -> Self {
-        Self { kind: f.kind, label: f.label }
+        Self {
+            kind: f.kind,
+            label: f.label,
+        }
     }
 }
 
@@ -120,7 +126,9 @@ impl From<AgentDiagnostic> for JsAgentDiagnostic {
         Self {
             kind: d.kind,
             message: d.message,
-            fix_actions: d.fix_actions.map(|v| v.into_iter().map(Into::into).collect()),
+            fix_actions: d
+                .fix_actions
+                .map(|v| v.into_iter().map(Into::into).collect()),
         }
     }
 }
@@ -138,7 +146,9 @@ impl From<DetectedAgent> for JsDetectedAgent {
             models_source: a.models_source.into(),
             auth_status: a.auth_status.map(Into::into),
             auth_message: a.auth_message,
-            diagnostics: a.diagnostics.map(|v| v.into_iter().map(Into::into).collect()),
+            diagnostics: a
+                .diagnostics
+                .map(|v| v.into_iter().map(Into::into).collect()),
             stream_format: a.stream_format,
             install_url: a.install_url,
             docs_url: a.docs_url,
@@ -186,26 +196,33 @@ pub async fn scan_agents(
     defs: Vec<JsAgentDef>,
     env_config: Option<HashMap<String, HashMap<String, String>>>,
 ) -> Result<JsDetectionResult> {
-    let rust_defs: Vec<AgentDef> = defs.into_iter().map(|d| AgentDef {
-        id: d.id,
-        name: d.name,
-        bin: d.bin,
-        fallback_bins: d.fallback_bins,
-        version_args: d.version_args,
-        version_probe_timeout_ms: d.version_probe_timeout_ms as u64,
-        fallback_models: d.fallback_models.into_iter().map(|m| ModelOption {
-            id: m.id,
-            label: m.label,
-        }).collect(),
-        stream_format: d.stream_format,
-        install_url: d.install_url,
-        docs_url: d.docs_url,
-        bin_env_key: d.bin_env_key,
-        auth_probe_args: d.auth_probe_args,
-        auth_probe_timeout_ms: d.auth_probe_timeout_ms.map(|v| v as u64),
-        list_models_args: d.list_models_args,
-        list_models_timeout_ms: d.list_models_timeout_ms.map(|v| v as u64),
-    }).collect();
+    let rust_defs: Vec<AgentDef> = defs
+        .into_iter()
+        .map(|d| AgentDef {
+            id: d.id,
+            name: d.name,
+            bin: d.bin,
+            fallback_bins: d.fallback_bins,
+            version_args: d.version_args,
+            version_probe_timeout_ms: d.version_probe_timeout_ms as u64,
+            fallback_models: d
+                .fallback_models
+                .into_iter()
+                .map(|m| ModelOption {
+                    id: m.id,
+                    label: m.label,
+                })
+                .collect(),
+            stream_format: d.stream_format,
+            install_url: d.install_url,
+            docs_url: d.docs_url,
+            bin_env_key: d.bin_env_key,
+            auth_probe_args: d.auth_probe_args,
+            auth_probe_timeout_ms: d.auth_probe_timeout_ms.map(|v| v as u64),
+            list_models_args: d.list_models_args,
+            list_models_timeout_ms: d.list_models_timeout_ms.map(|v| v as u64),
+        })
+        .collect();
 
     let env = env_config.unwrap_or_default();
     let result = detect_agents(&rust_defs, &env).await;

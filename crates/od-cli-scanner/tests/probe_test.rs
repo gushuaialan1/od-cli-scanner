@@ -7,7 +7,12 @@ use std::os::unix::fs::PermissionsExt;
 
 #[tokio::test]
 async fn probe_version_success() {
-    let result = probe_version(std::path::Path::new("/bin/sh"), &["-c".to_string(), "echo 'v1.0.0'".to_string()], 5000).await;
+    let result = probe_version(
+        std::path::Path::new("/bin/sh"),
+        &["-c".to_string(), "echo 'v1.0.0'".to_string()],
+        5000,
+    )
+    .await;
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), Some("1.0.0".to_string()));
 }
@@ -58,12 +63,7 @@ async fn probe_version_not_executable() {
     fs::write(&fake_bin, "#!/bin/sh\n").unwrap();
     // No execute permission
 
-    let result = probe_version(
-        &fake_bin,
-        &["--version".to_string()],
-        5000,
-    )
-    .await;
+    let result = probe_version(&fake_bin, &["--version".to_string()], 5000).await;
     assert!(matches!(
         result,
         Err(ProbeError::NotInvocable(NotInvocableCause::NotExecutable))
@@ -150,13 +150,8 @@ async fn probe_models_returns_fallback() {
         },
     ];
 
-    let (models, source) = probe_models(
-        std::path::Path::new("/bin/sh"),
-        None,
-        5000,
-        &fallback,
-    )
-    .await;
+    let (models, source) =
+        probe_models(std::path::Path::new("/bin/sh"), None, 5000, &fallback).await;
 
     assert_eq!(models, fallback);
     assert_eq!(source, ModelsSource::Fallback);

@@ -1,14 +1,11 @@
-use super::types::*;
 use super::executables;
 use super::probe;
-use std::time::Instant;
+use super::types::*;
 use futures::future::join_all;
+use std::time::Instant;
 
 /// Detect all configured agents concurrently.
-pub async fn detect_agents(
-    defs: &[AgentDef],
-    configured_env: &AgentEnvConfig,
-) -> DetectionResult {
+pub async fn detect_agents(defs: &[AgentDef], configured_env: &AgentEnvConfig) -> DetectionResult {
     let start = Instant::now();
 
     let futures: Vec<_> = defs
@@ -25,40 +22,39 @@ pub async fn detect_agents(
     }
 }
 
-async fn detect_single_agent(
-    def: &AgentDef,
-    configured_env: &AgentEnvConfig,
-) -> DetectedAgent {
+async fn detect_single_agent(def: &AgentDef, configured_env: &AgentEnvConfig) -> DetectedAgent {
     let env_for_agent = configured_env.get(&def.id).cloned().unwrap_or_default();
 
     // 1. Resolve executable
     let Some(bin_path) = executables::resolve_executable(def, &env_for_agent) else {
-        return make_unavailable(def, vec![AgentDiagnostic {
-            kind: "not_on_path".into(),
-            message: format!(
-                "{} not found on PATH. Install it or set {}.",
-                def.name,
-                def.bin_env_key.as_deref().unwrap_or(&format!("{}_BIN", def.id.to_uppercase()))
-            ),
-            fix_actions: Some(vec![
-                FixAction {
-                    kind: "install".into(),
-                    label: Some(format!("Install {}", def.name)),
-                },
-                FixAction {
-                    kind: "setEnv".into(),
-                    label: def.bin_env_key.as_ref().map(|k| format!("Set {}", k)),
-                },
-            ]),
-        }]);
+        return make_unavailable(
+            def,
+            vec![AgentDiagnostic {
+                kind: "not_on_path".into(),
+                message: format!(
+                    "{} not found on PATH. Install it or set {}.",
+                    def.name,
+                    def.bin_env_key
+                        .as_deref()
+                        .unwrap_or(&format!("{}_BIN", def.id.to_uppercase()))
+                ),
+                fix_actions: Some(vec![
+                    FixAction {
+                        kind: "install".into(),
+                        label: Some(format!("Install {}", def.name)),
+                    },
+                    FixAction {
+                        kind: "setEnv".into(),
+                        label: def.bin_env_key.as_ref().map(|k| format!("Set {}", k)),
+                    },
+                ]),
+            }],
+        );
     };
 
     // 2. Probe version
-    let version_result = probe::probe_version(
-        &bin_path,
-        &def.version_args,
-        def.version_probe_timeout_ms,
-    ).await;
+    let version_result =
+        probe::probe_version(&bin_path, &def.version_args, def.version_probe_timeout_ms).await;
 
     let (version, available, diagnostics) = match version_result {
         Ok(v) => (v, true, vec![]),
@@ -90,14 +86,17 @@ async fn detect_single_agent(
             return make_unavailable(def, vec![diag]);
         }
         Err(probe::ProbeError::Timeout) => {
-            return make_unavailable(def, vec![AgentDiagnostic {
-                kind: "timeout".into(),
-                message: "Version probe timed out".into(),
-                fix_actions: Some(vec![FixAction {
-                    kind: "rescan".into(),
-                    label: None,
-                }]),
-            }]);
+            return make_unavailable(
+                def,
+                vec![AgentDiagnostic {
+                    kind: "timeout".into(),
+                    message: "Version probe timed out".into(),
+                    fix_actions: Some(vec![FixAction {
+                        kind: "rescan".into(),
+                        label: None,
+                    }]),
+                }],
+            );
         }
     };
 
@@ -115,7 +114,8 @@ async fn detect_single_agent(
         def.list_models_args.as_deref(),
         def.list_models_timeout_ms.unwrap_or(5000),
         &def.fallback_models,
-    ).await;
+    )
+    .await;
 
     // Build diagnostics from auth
     let mut final_diagnostics = diagnostics;
