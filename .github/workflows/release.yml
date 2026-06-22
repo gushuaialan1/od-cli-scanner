@@ -123,7 +123,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: napi-${{ matrix.target }}
-          path: crates/napi/*.node
+          path: npm/*.node
 
   # ─── Publish npm + cargo + GitHub Release ───────────────────────
   publish:
