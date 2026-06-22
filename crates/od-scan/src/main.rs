@@ -83,8 +83,8 @@ async fn main() {
         }
         "table" => {
             println!(
-                "{:<12} {:<20} {:<10} {}",
-                "ID", "Name", "Available", "Version"
+                "{:<12} {:<20} {:<10} Version",
+                "ID", "Name", "Available"
             );
             println!("{}", "-".repeat(60));
             for agent in &agents {

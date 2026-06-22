@@ -2,6 +2,8 @@ use od_cli_scanner::core::executables::resolve_executable;
 use od_cli_scanner::core::types::AgentDef;
 use std::collections::HashMap;
 use std::fs;
+
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
 fn make_agent_def(bin: &str, fallback_bins: Vec<&str>, env_key: Option<&str>) -> AgentDef {
@@ -31,6 +33,7 @@ fn resolve_executable_returns_none_for_missing_bin() {
     assert!(resolve_executable(&def, &env).is_none());
 }
 
+#[cfg(unix)]
 #[test]
 fn resolve_executable_uses_configured_env_override() {
     let tmpdir = tempfile::tempdir().unwrap();
@@ -49,6 +52,7 @@ fn resolve_executable_uses_configured_env_override() {
     assert_eq!(result, Some(fake_bin));
 }
 
+#[cfg(unix)]
 #[test]
 fn resolve_executable_prefers_configured_env_over_process_env() {
     let tmpdir = tempfile::tempdir().unwrap();
@@ -72,6 +76,7 @@ fn resolve_executable_prefers_configured_env_over_process_env() {
     assert_eq!(result, Some(fake_bin1));
 }
 
+#[cfg(unix)]
 #[test]
 fn resolve_executable_falls_back_to_process_env() {
     let tmpdir = tempfile::tempdir().unwrap();
@@ -105,6 +110,7 @@ fn resolve_executable_skips_non_executable_env_override() {
     assert!(result.is_none());
 }
 
+#[cfg(unix)]
 #[test]
 fn resolve_executable_expands_tilde_in_env_override() {
     let home = dirs::home_dir().unwrap();
