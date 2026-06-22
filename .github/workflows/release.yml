@@ -109,14 +109,14 @@ jobs:
 
       - name: Build napi (native)
         if: matrix.target != 'aarch64-unknown-linux-gnu'
-        run: napi build --platform --release --target ${{ matrix.target }} --package od-cli-scanner-napi
+        run: napi build --platform --release --target ${{ matrix.target }} --package od-cli-scanner-napi -o ../../npm
         working-directory: ./crates/napi
 
       - name: Build napi (cross)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           cargo install cross
-          napi build --platform --release --target ${{ matrix.target }} --cross-compile --package od-cli-scanner-napi
+          napi build --platform --release --target ${{ matrix.target }} --cross-compile --package od-cli-scanner-napi -o ../../npm
         working-directory: ./crates/napi
 
       - name: Upload napi artifact
