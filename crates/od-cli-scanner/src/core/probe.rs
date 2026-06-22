@@ -1,9 +1,12 @@
 use super::types::*;
+use super::version_parser::parse_version;
 use std::process::Stdio;
 use tokio::process::Command;
 use tokio::time::{timeout, Duration};
 
-/// Probe version by running `<bin> --version`
+/// Probe version by running `<bin> --version` and parsing the output.
+/// Returns `Ok(Some(version))` on success, `Ok(None)` if the command ran but
+/// produced no parseable version, and `Err(...)` for invocation failures.
 pub async fn probe_version(
     bin_path: &std::path::Path,
     args: &[String],
@@ -23,8 +26,8 @@ pub async fn probe_version(
         Ok(Ok(output)) => {
             if output.status.success() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
-                let version = stdout.trim().lines().next().map(|s| s.to_string());
-                Ok(version)
+                let raw = stdout.trim().lines().next().unwrap_or("");
+                Ok(parse_version(raw))
             } else {
                 // Non-zero exit but binary ran — still invocable
                 Ok(None)
