@@ -112,10 +112,16 @@ jobs:
         run: napi build --platform --release --target ${{ matrix.target }} --package od-cli-scanner-napi -o ./npm
         working-directory: .
 
+      - name: Install zig
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
       - name: Build napi (cross)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
-          cargo install cross
+          cargo install cargo-zigbuild
           napi build --platform --release --target ${{ matrix.target }} --cross-compile --package od-cli-scanner-napi -o ./npm
         working-directory: .
 
