@@ -3,6 +3,8 @@ use od_cli_scanner::core::probe::{
 };
 use od_cli_scanner::core::types::{AuthStatus, ModelOption, ModelsSource};
 use std::fs;
+
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
 #[tokio::test]
