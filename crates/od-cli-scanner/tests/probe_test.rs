@@ -5,8 +5,6 @@ use od_cli_scanner::core::types::{AuthStatus, ModelOption, ModelsSource};
 use std::fs;
 
 #[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-
 #[tokio::test]
 async fn probe_version_success() {
     let result = probe_version(
@@ -19,6 +17,7 @@ async fn probe_version_success() {
     assert_eq!(result.unwrap(), Some("1.0.0".to_string()));
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn probe_version_nonzero_exit_returns_none() {
     // A command that exits with non-zero but the binary is still invocable
@@ -32,6 +31,7 @@ async fn probe_version_nonzero_exit_returns_none() {
     assert_eq!(result.unwrap(), None);
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn probe_version_timeout() {
     // Sleep longer than the timeout
@@ -58,6 +58,7 @@ async fn probe_version_not_found() {
     ));
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn probe_version_not_executable() {
     let tmpdir = tempfile::tempdir().unwrap();
@@ -72,6 +73,7 @@ async fn probe_version_not_executable() {
     ));
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn probe_auth_ok() {
     // Simulate successful auth by outputting nothing suspicious
@@ -84,6 +86,7 @@ async fn probe_auth_ok() {
     assert_eq!(result, Some(AuthStatus::Ok));
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn probe_auth_missing() {
     let result = probe_auth(
@@ -95,6 +98,7 @@ async fn probe_auth_missing() {
     assert_eq!(result, Some(AuthStatus::Missing));
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn probe_auth_login_required() {
     let result = probe_auth(
@@ -106,6 +110,7 @@ async fn probe_auth_login_required() {
     assert_eq!(result, Some(AuthStatus::Missing));
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn probe_auth_no_valid_credentials() {
     let result = probe_auth(
@@ -117,6 +122,7 @@ async fn probe_auth_no_valid_credentials() {
     assert_eq!(result, Some(AuthStatus::Missing));
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn probe_auth_unknown_on_failure() {
     let result = probe_auth(
@@ -128,6 +134,7 @@ async fn probe_auth_unknown_on_failure() {
     assert_eq!(result, Some(AuthStatus::Unknown));
 }
 
+#[cfg(unix)]
 #[tokio::test]
 async fn probe_auth_timeout_returns_none() {
     let result = probe_auth(
