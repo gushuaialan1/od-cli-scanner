@@ -3,6 +3,8 @@ import { AgentService } from './agentService';
 import { ScannerBridge } from './scannerBridge';
 import { StatusBarController } from './statusBarController';
 import { CommandController } from './commandController';
+import { ContextMenuController } from './contextMenuController';
+import { AgentTreeProvider } from './agentTreeProvider';
 import { TerminalLauncher } from './terminalLauncher';
 import { ScannerError } from './types';
 
@@ -10,6 +12,8 @@ let agentService: AgentService;
 let scannerBridge: ScannerBridge;
 let statusBarController: StatusBarController;
 let commandController: CommandController;
+let contextMenuController: ContextMenuController;
+let agentTreeProvider: AgentTreeProvider;
 let terminalLauncher: TerminalLauncher;
 let outputChannel: vscode.OutputChannel;
 let refreshTimer: NodeJS.Timeout | undefined;
@@ -19,6 +23,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(outputChannel);
 
   agentService = new AgentService();
+  agentService.bindContext(context);
   terminalLauncher = new TerminalLauncher();
   scannerBridge = new ScannerBridge(outputChannel);
   statusBarController = new StatusBarController(
@@ -33,6 +38,39 @@ export function activate(context: vscode.ExtensionContext): void {
     terminalLauncher,
     scannerBridge
   );
+  contextMenuController = new ContextMenuController(
+    context,
+    agentService,
+    terminalLauncher,
+    scannerBridge
+  );
+
+  // Tree view for agent details
+  agentTreeProvider = new AgentTreeProvider(agentService, terminalLauncher);
+  const treeView = vscode.window.createTreeView('odScannerAgents', {
+    treeDataProvider: agentTreeProvider,
+  });
+  context.subscriptions.push(treeView);
+
+  // Register launch by id command (used by tree view)
+  const launchByIdCmd = vscode.commands.registerCommand(
+    'odScanner.launchAgentById',
+    (agentId: string) => {
+      const agent = agentService.getById(agentId);
+      if (agent) {
+        terminalLauncher.spawn(agent);
+        agentService.recordUsage(agentId);
+      }
+    }
+  );
+  context.subscriptions.push(launchByIdCmd);
+
+  // Refresh tree view command
+  const refreshTreeCmd = vscode.commands.registerCommand(
+    'odScanner.refreshTreeView',
+    () => agentTreeProvider.refresh()
+  );
+  context.subscriptions.push(refreshTreeCmd);
 
   // Initial scan
   performScan();

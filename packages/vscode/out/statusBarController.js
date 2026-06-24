@@ -105,7 +105,9 @@ class StatusBarController {
             }
             return;
         }
-        const items = available.map((agent) => ({
+        // Use recent-first ordering
+        const sortedAgents = this.agentService.getRecentAgents();
+        const items = sortedAgents.map((agent) => ({
             label: `$(play) ${agent.name}`,
             description: agent.version || '',
             detail: agent.path || '',
@@ -168,6 +170,7 @@ class StatusBarController {
         }
         if (picked.agent) {
             this.terminalLauncher.spawn(picked.agent);
+            this.agentService.recordUsage(picked.agent.id);
         }
     }
     dispose() {

@@ -33,13 +33,14 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CommandController = void 0;
+exports.ContextMenuController = void 0;
 const vscode = __importStar(require("vscode"));
-class CommandController {
+class ContextMenuController {
     context;
     agentService;
     terminalLauncher;
     scannerBridge;
+    disposables = [];
     constructor(context, agentService, terminalLauncher, scannerBridge) {
         this.context = context;
         this.agentService = agentService;
@@ -48,75 +49,61 @@ class CommandController {
         this.registerCommands();
     }
     registerCommands() {
-        const launchCmd = vscode.commands.registerCommand('odScanner.launchAgent', () => this.launchAgent());
-        const refreshCmd = vscode.commands.registerCommand('odScanner.refreshAgents', () => this.refreshAgents());
-        const settingsCmd = vscode.commands.registerCommand('odScanner.openSettings', () => this.openSettings());
-        this.context.subscriptions.push(launchCmd, refreshCmd, settingsCmd);
+        const openWithCmd = vscode.commands.registerCommand('odScanner.openWithAgent', (uri, selectedUris) => this.openWithAgent(uri, selectedUris));
+        this.context.subscriptions.push(openWithCmd);
     }
-    async launchAgent() {
+    async openWithAgent(uri, selectedUris) {
         const available = this.agentService.getAvailable();
         if (available.length === 0) {
             const action = await vscode.window.showWarningMessage('No AI agents detected.', 'Refresh', 'Open Settings');
             if (action === 'Refresh') {
-                await this.refreshAgents();
+                await vscode.commands.executeCommand('odScanner.refreshAgents');
             }
             else if (action === 'Open Settings') {
-                await this.openSettings();
+                await vscode.commands.executeCommand('odScanner.openSettings');
             }
             return;
         }
-        const config = vscode.workspace.getConfiguration('odScanner');
-        const defaultAgentId = config.get('defaultAgent', '');
-        const items = this.agentService.getRecentAgents().map((agent) => ({
+        const uris = selectedUris && selectedUris.length > 0 ? selectedUris : uri ? [uri] : [];
+        const contextPaths = uris.map((u) => u.fsPath);
+        const items = available.map((agent) => ({
             label: agent.name,
             description: agent.version || '',
             detail: agent.path || '',
             agent,
         }));
         const picked = await vscode.window.showQuickPick(items, {
-            placeHolder: 'Select an AI agent to launch',
-            ...(defaultAgentId ? { activeItems: items.filter((i) => i.agent.id === defaultAgentId) } : {}),
+            placeHolder: contextPaths.length > 0
+                ? `Select an AI agent to open ${contextPaths.length} item(s)`
+                : 'Select an AI agent to launch',
         });
         if (!picked) {
             return;
         }
         const prompt = await vscode.window.showInputBox({
-            placeHolder: 'Optional prompt (e.g., "Refactor this module")',
+            placeHolder: 'Optional prompt (e.g., "Review this file")',
             prompt: 'Enter a prompt to pass to the agent, or leave blank',
         });
+        this.launchAgent(picked.agent, contextPaths, prompt || undefined);
+    }
+    launchAgent(agent, contextPaths, prompt) {
+        const config = vscode.workspace.getConfiguration('odScanner');
         const globalArgs = config.get('launchArgs', []);
         const args = [...globalArgs];
+        if (contextPaths.length > 0) {
+            args.push(...contextPaths);
+        }
         if (prompt) {
             args.push(prompt);
         }
-        if (args.length > 0) {
-            this.terminalLauncher.spawnWithArgs(picked.agent, args);
-        }
-        else {
-            this.terminalLauncher.spawn(picked.agent);
-        }
-        this.agentService.recordUsage(picked.agent.id);
+        this.terminalLauncher.spawnWithArgs(agent, args);
+        this.agentService.recordUsage(agent.id);
     }
-    async refreshAgents() {
-        vscode.window.withProgress({
-            location: vscode.ProgressLocation.Window,
-            title: 'Scanning AI agents...',
-            cancellable: false,
-        }, async () => {
-            try {
-                const agents = await this.scannerBridge.scan();
-                this.agentService.update(agents);
-                const available = this.agentService.getAvailable();
-                vscode.window.showInformationMessage(`Found ${available.length} AI agent${available.length !== 1 ? 's' : ''}.`);
-            }
-            catch (err) {
-                vscode.window.showErrorMessage(`Agent scan failed: ${err.message}`);
-            }
-        });
-    }
-    async openSettings() {
-        await vscode.commands.executeCommand('workbench.action.openSettings', 'odScanner');
+    dispose() {
+        for (const d of this.disposables) {
+            d.dispose();
+        }
     }
 }
-exports.CommandController = CommandController;
-//# sourceMappingURL=commandController.js.map
+exports.ContextMenuController = ContextMenuController;
+//# sourceMappingURL=contextMenuController.js.map

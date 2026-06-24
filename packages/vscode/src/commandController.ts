@@ -46,7 +46,10 @@ export class CommandController {
       return;
     }
 
-    const items = available.map((agent) => ({
+    const config = vscode.workspace.getConfiguration('odScanner');
+    const defaultAgentId = config.get<string>('defaultAgent', '');
+
+    const items = this.agentService.getRecentAgents().map((agent) => ({
       label: agent.name,
       description: agent.version || '',
       detail: agent.path || '',
@@ -55,6 +58,7 @@ export class CommandController {
 
     const picked = await vscode.window.showQuickPick(items, {
       placeHolder: 'Select an AI agent to launch',
+      ...(defaultAgentId ? { activeItems: items.filter((i) => i.agent.id === defaultAgentId) } : {}),
     });
 
     if (!picked) { return; }
@@ -64,7 +68,18 @@ export class CommandController {
       prompt: 'Enter a prompt to pass to the agent, or leave blank',
     });
 
-    this.terminalLauncher.spawn(picked.agent, prompt || undefined);
+    const globalArgs = config.get<string[]>('launchArgs', []);
+    const args = [...globalArgs];
+    if (prompt) {
+      args.push(prompt);
+    }
+
+    if (args.length > 0) {
+      this.terminalLauncher.spawnWithArgs(picked.agent, args);
+    } else {
+      this.terminalLauncher.spawn(picked.agent);
+    }
+    this.agentService.recordUsage(picked.agent.id);
   }
 
   private async refreshAgents(): Promise<void> {

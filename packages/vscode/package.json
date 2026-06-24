@@ -33,13 +33,28 @@
         "category": "AI Agent"
       },
       {
+        "command": "odScanner.launchAgentById",
+        "title": "Launch Agent by ID",
+        "category": "AI Agent"
+      },
+      {
         "command": "odScanner.refreshAgents",
         "title": "AI Agent: Refresh Agents",
         "category": "AI Agent"
       },
       {
+        "command": "odScanner.refreshTreeView",
+        "title": "Refresh Agent Tree",
+        "category": "AI Agent"
+      },
+      {
         "command": "odScanner.openSettings",
         "title": "AI Agent: Settings...",
+        "category": "AI Agent"
+      },
+      {
+        "command": "odScanner.openWithAgent",
+        "title": "Open with AI Agent",
         "category": "AI Agent"
       }
     ],
@@ -55,6 +70,14 @@
           "type": "string",
           "default": "",
           "description": "Default agent to launch when no selection is made."
+        },
+        "odScanner.launchArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Global arguments passed to every agent launch."
         },
         "odScanner.autoRefresh": {
           "type": "boolean",
@@ -74,6 +97,15 @@
         }
       }
     },
+    "views": {
+      "explorer": [
+        {
+          "id": "odScannerAgents",
+          "name": "AI Agents",
+          "when": "true"
+        }
+      ]
+    },
     "menus": {
       "commandPalette": [
         {
@@ -86,6 +118,13 @@
         },
         {
           "command": "odScanner.openSettings",
+          "when": "true"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "odScanner.openWithAgent",
+          "group": "2_workspace@5",
           "when": "true"
         }
       ]
