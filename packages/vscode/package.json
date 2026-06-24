@@ -1,0 +1,105 @@
+{
+  "name": "od-scanner-vscode",
+  "displayName": "OD Scanner — AI Agent Launcher",
+  "description": "Detect & launch local AI coding agents inside VS Code — one click, zero friction.",
+  "version": "0.1.0",
+  "publisher": "open-design",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "agent",
+    "claude",
+    "codex",
+    "kimi",
+    "scanner"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "odScanner.launchAgent",
+        "title": "AI Agent: Launch...",
+        "category": "AI Agent"
+      },
+      {
+        "command": "odScanner.refreshAgents",
+        "title": "AI Agent: Refresh Agents",
+        "category": "AI Agent"
+      },
+      {
+        "command": "odScanner.openSettings",
+        "title": "AI Agent: Settings...",
+        "category": "AI Agent"
+      }
+    ],
+    "configuration": {
+      "title": "OD Scanner",
+      "properties": {
+        "odScanner.binaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to the od-scan binary. Leave empty to auto-discover from PATH."
+        },
+        "odScanner.defaultAgent": {
+          "type": "string",
+          "default": "",
+          "description": "Default agent to launch when no selection is made."
+        },
+        "odScanner.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh agent detection on activation."
+        },
+        "odScanner.refreshInterval": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "description": "Interval in seconds between automatic refreshes."
+        },
+        "odScanner.showUnavailable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show unavailable agents in the status bar menu."
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "odScanner.launchAgent",
+          "when": "true"
+        },
+        {
+          "command": "odScanner.refreshAgents",
+          "when": "true"
+        },
+        {
+          "command": "odScanner.openSettings",
+          "when": "true"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}
