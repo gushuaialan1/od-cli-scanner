@@ -16,6 +16,7 @@ pub struct JsModelOption {
 pub enum JsAuthStatus {
     Ok,
     Missing,
+    Expired,
     Unknown,
 }
 
@@ -98,6 +99,7 @@ impl From<AuthStatus> for JsAuthStatus {
         match a {
             AuthStatus::Ok => JsAuthStatus::Ok,
             AuthStatus::Missing => JsAuthStatus::Missing,
+            AuthStatus::Expired => JsAuthStatus::Expired,
             AuthStatus::Unknown => JsAuthStatus::Unknown,
         }
     }
@@ -221,6 +223,9 @@ pub async fn scan_agents(
             auth_probe_timeout_ms: d.auth_probe_timeout_ms.map(|v| v as u64),
             list_models_args: d.list_models_args,
             list_models_timeout_ms: d.list_models_timeout_ms.map(|v| v as u64),
+            help_args: None,
+            help_probe_timeout_ms: None,
+            capabilities: vec![],
         })
         .collect();
 

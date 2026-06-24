@@ -16,6 +16,7 @@ pub struct ModelOption {
 #[serde(rename_all = "lowercase")]
 pub enum AuthStatus {
     Ok,
+    Expired,
     Missing,
     Unknown,
 }
@@ -70,6 +71,8 @@ pub struct DetectedAgent {
     pub install_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub docs_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capabilities: Vec<String>,
 }
 
 /// Full detection result for all agents
@@ -109,6 +112,12 @@ pub struct AgentDef {
     pub list_models_args: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub list_models_timeout_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub help_args: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub help_probe_timeout_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub capabilities: Vec<String>,
 }
 
 fn default_timeout() -> u64 {
@@ -245,6 +254,7 @@ mod tests {
             stream_format: Some("anthropic".to_string()),
             install_url: None,
             docs_url: None,
+            capabilities: vec![],
         };
 
         let json = serde_json::to_string(&agent).unwrap();

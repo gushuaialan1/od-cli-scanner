@@ -23,6 +23,9 @@ fn make_agent_def(bin: &str, fallback_bins: Vec<&str>, env_key: Option<&str>) ->
         auth_probe_timeout_ms: None,
         list_models_args: None,
         list_models_timeout_ms: None,
+        help_args: None,
+        help_probe_timeout_ms: None,
+        capabilities: vec![],
     }
 }
 

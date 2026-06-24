@@ -108,7 +108,7 @@ async fn detect_single_agent(def: &AgentDef, configured_env: &AgentEnvConfig) ->
         None
     };
 
-    // 4. Probe models (fallback for now)
+    // 4. Probe models (live if available, fallback otherwise)
     let (models, models_source) = probe::probe_models(
         &bin_path,
         def.list_models_args.as_deref(),
@@ -117,26 +117,62 @@ async fn detect_single_agent(def: &AgentDef, configured_env: &AgentEnvConfig) ->
     )
     .await;
 
+    // 5. Probe capabilities via --help
+    let capabilities = if def.help_args.is_some() || !def.capabilities.is_empty() {
+        let timeout = def.help_probe_timeout_ms.unwrap_or(5000);
+        probe::probe_capabilities(
+            &bin_path,
+            def.help_args.as_deref(),
+            timeout,
+            &def.capabilities,
+        )
+        .await
+    } else {
+        vec![]
+    };
+
     // Build diagnostics from auth
     let mut final_diagnostics = diagnostics;
-    if let Some(AuthStatus::Missing) = auth_status {
-        final_diagnostics.push(AgentDiagnostic {
-            kind: "auth_missing".into(),
-            message: format!(
-                "{} is installed but not authenticated. Run login command.",
-                def.name
-            ),
-            fix_actions: Some(vec![
-                FixAction {
-                    kind: "signIn".into(),
-                    label: Some(format!("Sign in to {}", def.name)),
-                },
-                FixAction {
-                    kind: "rescan".into(),
-                    label: Some("Rescan".into()),
-                },
-            ]),
-        });
+    match auth_status {
+        Some(AuthStatus::Missing) => {
+            final_diagnostics.push(AgentDiagnostic {
+                kind: "auth_missing".into(),
+                message: format!(
+                    "{} is installed but not authenticated. Run login command.",
+                    def.name
+                ),
+                fix_actions: Some(vec![
+                    FixAction {
+                        kind: "signIn".into(),
+                        label: Some(format!("Sign in to {}", def.name)),
+                    },
+                    FixAction {
+                        kind: "rescan".into(),
+                        label: Some("Rescan".into()),
+                    },
+                ]),
+            });
+        }
+        Some(AuthStatus::Expired) => {
+            final_diagnostics.push(AgentDiagnostic {
+                kind: "auth_expired".into(),
+                message: format!(
+                    "{} authentication has expired. Please re-authenticate.",
+                    def.name
+                ),
+                fix_actions: Some(vec![
+                    FixAction {
+                        kind: "reAuth".into(),
+                        label: Some(format!("Re-authenticate {}", def.name)),
+                    },
+                    FixAction {
+                        kind: "rescan".into(),
+                        label: Some("Rescan".into()),
+                    },
+                ]),
+            });
+        }
+        _ => {}
     }
 
     DetectedAgent {
@@ -158,6 +194,7 @@ async fn detect_single_agent(def: &AgentDef, configured_env: &AgentEnvConfig) ->
         stream_format: Some(def.stream_format.clone()),
         install_url: def.install_url.clone(),
         docs_url: def.docs_url.clone(),
+        capabilities,
     }
 }
 
@@ -177,5 +214,6 @@ fn make_unavailable(def: &AgentDef, diagnostics: Vec<AgentDiagnostic>) -> Detect
         stream_format: Some(def.stream_format.clone()),
         install_url: def.install_url.clone(),
         docs_url: def.docs_url.clone(),
+        capabilities: vec![],
     }
 }

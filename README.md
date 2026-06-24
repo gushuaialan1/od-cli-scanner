@@ -16,6 +16,10 @@
 - **Concurrent scanning** — Probes all agents in parallel, yields results as they resolve
 - **Smart PATH resolution** — Searches user toolchain dirs (Homebrew, ~/.local/bin, cargo, nvm, bun)
 - **Auth diagnostics** — Detects "installed but not authenticated" states
+- **Live model probing** — Real-time model list fetching via CLI commands
+- **Capability detection** — `--help` probing to discover supported flags
+- **Agent registry** — Query and manage detected agents programmatically
+- **Launch support** — Build args and spawn agents for downstream consumption
 - **Env overrides** — Per-agent `*_BIN` environment variables for custom paths
 - **Multiple output formats** — JSON, table, CSV
 - **Cross-platform** — Linux, macOS, Windows
@@ -48,20 +52,29 @@ od-scan scan --config ./my-agents.json
 ### As a Rust library
 
 ```rust
-use od_cli_scanner::{detect_agents, AgentDef, ModelOption};
+use od_cli_scanner::{detect_agents, AgentRegistry, AgentDef, BuildArgsOptions};
 use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() {
-    let defs = vec![AgentDef {
-        id: "claude".into(),
-        name: "Claude Code".into(),
-        bin: "claude".into(),
-        ..Default::default()
-    }];
+    // 1. Detect agents
+    let registry = AgentRegistry::new();
+    let result = detect_agents(registry.list(), &HashMap::new()).await;
     
-    let result = detect_agents(&defs, &HashMap::new()).await;
-    println!("{}", serde_json::to_string_pretty(&result).unwrap());
+    // 2. Find first available agent
+    let agent = result.agents.iter().find(|a| a.available).unwrap();
+    
+    // 3. Get agent definition
+    let def = registry.get(&agent.id).unwrap();
+    
+    // 4. Build launch arguments
+    let options = BuildArgsOptions {
+        prompt: "Hello world".to_string(),
+        model: Some("claude-sonnet-4".to_string()),
+        ..Default::default()
+    };
+    let args = def.build_args(&options);
+    println!("Launch args: {:?}", args);
 }
 ```
 
@@ -86,8 +99,11 @@ console.log(JSON.parse(result));
 |-------|---------------|
 | `core::types` | Agent definitions, detection results, diagnostics |
 | `core::executables` | PATH resolution, env overrides, toolchain discovery |
-| `core::probe` | Async process spawning, version/auth/model probing |
+| `core::probe` | Async process spawning, version/auth/model/capability probing |
 | `core::detector` | Concurrent orchestration, fault isolation |
+| `core::registry` | Agent registry with `get()` / `list()` APIs |
+| `core::build_args` | Per-agent argument construction for launch |
+| `core::spawn` | Process spawning with env/cwd support |
 | `cli` | clap-based command-line interface |
 | `bindings` | napi-rs Node.js bindings |
 
@@ -149,8 +165,10 @@ cargo run -- scan --pretty
 
 ## Roadmap
 
-- [ ] Live model probing (currently fallback-only)
-- [ ] Capability flag detection (`--help` probing)
+- [x] Live model probing (real-time model list fetching)
+- [x] Capability flag detection (`--help` probing)
+- [x] Agent registry with programmatic APIs
+- [x] Agent launch support (build args + spawn)
 - [ ] Streaming detection results (SSE/WebSocket)
 - [ ] More built-in agents (Cursor, Gemini, Qwen, etc.)
 - [ ] WASM target for browser usage
@@ -192,20 +210,29 @@ od-scan scan --available-only --format table
 ### 作为 Rust 库
 
 ```rust
-use od_cli_scanner::{detect_agents, AgentDef};
+use od_cli_scanner::{detect_agents, AgentRegistry, BuildArgsOptions};
 use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() {
-    let defs = vec![AgentDef {
-        id: "claude".into(),
-        name: "Claude Code".into(),
-        bin: "claude".into(),
-        ..Default::default()
-    }];
+    // 1. 检测 Agent
+    let registry = AgentRegistry::new();
+    let result = detect_agents(registry.list(), &HashMap::new()).await;
     
-    let result = detect_agents(&defs, &HashMap::new()).await;
-    println!("{}", serde_json::to_string_pretty(&result).unwrap());
+    // 2. 查找第一个可用 Agent
+    let agent = result.agents.iter().find(|a| a.available).unwrap();
+    
+    // 3. 获取 Agent 定义
+    let def = registry.get(&agent.id).unwrap();
+    
+    // 4. 构建启动参数
+    let options = BuildArgsOptions {
+        prompt: "Hello world".to_string(),
+        model: Some("claude-sonnet-4".to_string()),
+        ..Default::default()
+    };
+    let args = def.build_args(&options);
+    println!("启动参数: {:?}", args);
 }
 ```
 

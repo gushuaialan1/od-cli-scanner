@@ -3,6 +3,7 @@ pub mod core;
 
 pub use core::detector::detect_agents;
 pub use core::probe::{NotInvocableCause, ProbeError};
+pub use core::registry::AgentRegistry;
 pub use core::types::{
     AgentDef, AgentDiagnostic, AgentEnvConfig, DetectedAgent, DetectionResult, FixAction,
     ModelOption,
