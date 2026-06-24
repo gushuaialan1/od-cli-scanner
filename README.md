@@ -2,7 +2,7 @@
 
 > **Rust-native CLI agent detection engine.** Detect installed AI coding agents (Claude Code, Codex, Kimi, Hermes, Reasonix, and more) by probing their binaries, versions, auth status, and available models.
 
-[![CI](https://github.com/nexu-io/od-cli-scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/nexu-io/od-cli-scanner/actions)
+[![CI](https://github.com/gushuaialan1/od-cli-scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/gushuaialan1/od-cli-scanner/actions)
 [![Crates.io](https://img.shields.io/crates/v/od-cli-scanner)](https://crates.io/crates/od-cli-scanner)
 [![npm](https://img.shields.io/npm/v/od-cli-scanner)](https://www.npmjs.com/package/od-cli-scanner)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
