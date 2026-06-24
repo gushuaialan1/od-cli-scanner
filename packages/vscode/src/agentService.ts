@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
-import { DetectedAgent } from './types';
+import { DetectedAgent, AgentModel } from './types';
 
 const RECENT_AGENTS_KEY = 'odScanner.recentAgents';
 const MAX_RECENT = 5;
 
 export class AgentService {
   private agents: DetectedAgent[] = [];
+  private modelsMap: Map<string, AgentModel[]> = new Map();
   private listeners: Set<() => void> = new Set();
   private recentIds: string[] = [];
   private globalState: vscode.Memento | undefined;
@@ -17,6 +18,13 @@ export class AgentService {
 
   update(agents: DetectedAgent[]): void {
     this.agents = agents;
+    // Build models map from agent data
+    this.modelsMap.clear();
+    for (const agent of agents) {
+      if (agent.models && agent.models.length > 0) {
+        this.modelsMap.set(agent.id, agent.models);
+      }
+    }
     this.notify();
   }
 
@@ -30,6 +38,10 @@ export class AgentService {
 
   getById(id: string): DetectedAgent | undefined {
     return this.agents.find((a) => a.id === id);
+  }
+
+  getModels(agentId: string): AgentModel[] | undefined {
+    return this.modelsMap.get(agentId);
   }
 
   getRecentAgents(): DetectedAgent[] {

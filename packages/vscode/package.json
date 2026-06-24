@@ -56,6 +56,11 @@
         "command": "odScanner.openWithAgent",
         "title": "Open with AI Agent",
         "category": "AI Agent"
+      },
+      {
+        "command": "odScanner.pauseResumeAutoRefresh",
+        "title": "AI Agent: Pause/Resume Auto Refresh",
+        "category": "AI Agent"
       }
     ],
     "configuration": {
@@ -118,6 +123,10 @@
         },
         {
           "command": "odScanner.openSettings",
+          "when": "true"
+        },
+        {
+          "command": "odScanner.pauseResumeAutoRefresh",
           "when": "true"
         }
       ],

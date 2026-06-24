@@ -5,6 +5,7 @@ const RECENT_AGENTS_KEY = 'odScanner.recentAgents';
 const MAX_RECENT = 5;
 class AgentService {
     agents = [];
+    modelsMap = new Map();
     listeners = new Set();
     recentIds = [];
     globalState;
@@ -14,6 +15,13 @@ class AgentService {
     }
     update(agents) {
         this.agents = agents;
+        // Build models map from agent data
+        this.modelsMap.clear();
+        for (const agent of agents) {
+            if (agent.models && agent.models.length > 0) {
+                this.modelsMap.set(agent.id, agent.models);
+            }
+        }
         this.notify();
     }
     getAll() {
@@ -24,6 +32,9 @@ class AgentService {
     }
     getById(id) {
         return this.agents.find((a) => a.id === id);
+    }
+    getModels(agentId) {
+        return this.modelsMap.get(agentId);
     }
     getRecentAgents() {
         const available = this.getAvailable();

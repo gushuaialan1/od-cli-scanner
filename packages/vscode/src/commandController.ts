@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { AgentService } from './agentService';
 import { TerminalLauncher } from './terminalLauncher';
 import { ScannerBridge } from './scannerBridge';
+import { DetectedAgent } from './types';
 
 export class CommandController {
   constructor(
@@ -26,8 +27,12 @@ export class CommandController {
       'odScanner.openSettings',
       () => this.openSettings()
     );
+    const pauseResumeCmd = vscode.commands.registerCommand(
+      'odScanner.pauseResumeAutoRefresh',
+      () => this.pauseResumeAutoRefresh()
+    );
 
-    this.context.subscriptions.push(launchCmd, refreshCmd, settingsCmd);
+    this.context.subscriptions.push(launchCmd, refreshCmd, settingsCmd, pauseResumeCmd);
   }
 
   private async launchAgent(): Promise<void> {
@@ -63,6 +68,9 @@ export class CommandController {
 
     if (!picked) { return; }
 
+    // Model selection if agent supports multiple models
+    const selectedModel = await this.pickModelIfNeeded(picked.agent);
+
     const prompt = await vscode.window.showInputBox({
       placeHolder: 'Optional prompt (e.g., "Refactor this module")',
       prompt: 'Enter a prompt to pass to the agent, or leave blank',
@@ -75,11 +83,27 @@ export class CommandController {
     }
 
     if (args.length > 0) {
-      this.terminalLauncher.spawnWithArgs(picked.agent, args);
+      this.terminalLauncher.spawnWithArgs(picked.agent, args, selectedModel);
     } else {
-      this.terminalLauncher.spawn(picked.agent);
+      this.terminalLauncher.spawn(picked.agent, undefined, selectedModel);
     }
     this.agentService.recordUsage(picked.agent.id);
+  }
+
+  private async pickModelIfNeeded(agent: DetectedAgent): Promise<string | undefined> {
+    const models = this.agentService.getModels(agent.id);
+    if (!models || models.length <= 1) {
+      return undefined;
+    }
+    const modelItems = models.map((m) => ({
+      label: m.label || m.id,
+      description: m.id,
+      modelId: m.id,
+    }));
+    const picked = await vscode.window.showQuickPick(modelItems, {
+      placeHolder: `Select a model for ${agent.name}`,
+    });
+    return picked?.modelId;
   }
 
   private async refreshAgents(): Promise<void> {
@@ -111,5 +135,13 @@ export class CommandController {
       'workbench.action.openSettings',
       'odScanner'
     );
+  }
+
+  private async pauseResumeAutoRefresh(): Promise<void> {
+    const config = vscode.workspace.getConfiguration('odScanner');
+    const current = config.get<boolean>('autoRefresh', true);
+    await config.update('autoRefresh', !current, true);
+    const state = !current ? 'enabled' : 'disabled';
+    vscode.window.showInformationMessage(`Auto refresh ${state}.`);
   }
 }

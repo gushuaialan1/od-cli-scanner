@@ -51,7 +51,8 @@ class CommandController {
         const launchCmd = vscode.commands.registerCommand('odScanner.launchAgent', () => this.launchAgent());
         const refreshCmd = vscode.commands.registerCommand('odScanner.refreshAgents', () => this.refreshAgents());
         const settingsCmd = vscode.commands.registerCommand('odScanner.openSettings', () => this.openSettings());
-        this.context.subscriptions.push(launchCmd, refreshCmd, settingsCmd);
+        const pauseResumeCmd = vscode.commands.registerCommand('odScanner.pauseResumeAutoRefresh', () => this.pauseResumeAutoRefresh());
+        this.context.subscriptions.push(launchCmd, refreshCmd, settingsCmd, pauseResumeCmd);
     }
     async launchAgent() {
         const available = this.agentService.getAvailable();
@@ -80,6 +81,8 @@ class CommandController {
         if (!picked) {
             return;
         }
+        // Model selection if agent supports multiple models
+        const selectedModel = await this.pickModelIfNeeded(picked.agent);
         const prompt = await vscode.window.showInputBox({
             placeHolder: 'Optional prompt (e.g., "Refactor this module")',
             prompt: 'Enter a prompt to pass to the agent, or leave blank',
@@ -90,12 +93,27 @@ class CommandController {
             args.push(prompt);
         }
         if (args.length > 0) {
-            this.terminalLauncher.spawnWithArgs(picked.agent, args);
+            this.terminalLauncher.spawnWithArgs(picked.agent, args, selectedModel);
         }
         else {
-            this.terminalLauncher.spawn(picked.agent);
+            this.terminalLauncher.spawn(picked.agent, undefined, selectedModel);
         }
         this.agentService.recordUsage(picked.agent.id);
+    }
+    async pickModelIfNeeded(agent) {
+        const models = this.agentService.getModels(agent.id);
+        if (!models || models.length <= 1) {
+            return undefined;
+        }
+        const modelItems = models.map((m) => ({
+            label: m.label || m.id,
+            description: m.id,
+            modelId: m.id,
+        }));
+        const picked = await vscode.window.showQuickPick(modelItems, {
+            placeHolder: `Select a model for ${agent.name}`,
+        });
+        return picked?.modelId;
     }
     async refreshAgents() {
         vscode.window.withProgress({
@@ -116,6 +134,13 @@ class CommandController {
     }
     async openSettings() {
         await vscode.commands.executeCommand('workbench.action.openSettings', 'odScanner');
+    }
+    async pauseResumeAutoRefresh() {
+        const config = vscode.workspace.getConfiguration('odScanner');
+        const current = config.get('autoRefresh', true);
+        await config.update('autoRefresh', !current, true);
+        const state = !current ? 'enabled' : 'disabled';
+        vscode.window.showInformationMessage(`Auto refresh ${state}.`);
     }
 }
 exports.CommandController = CommandController;

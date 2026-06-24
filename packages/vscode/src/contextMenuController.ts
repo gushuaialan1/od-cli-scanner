@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { AgentService } from './agentService';
 import { TerminalLauncher } from './terminalLauncher';
 import { ScannerBridge } from './scannerBridge';
-import { DetectedAgent, ScannerError } from './types';
+import { DetectedAgent } from './types';
 
 export class ContextMenuController {
   private disposables: vscode.Disposable[] = [];
@@ -43,6 +43,12 @@ export class ContextMenuController {
     const uris = selectedUris && selectedUris.length > 0 ? selectedUris : uri ? [uri] : [];
     const contextPaths = uris.map((u) => u.fsPath);
 
+    // Determine workspace folder for the selected file(s)
+    let workspaceFolder: vscode.WorkspaceFolder | undefined;
+    if (uris.length > 0) {
+      workspaceFolder = vscode.workspace.getWorkspaceFolder(uris[0]);
+    }
+
     const items = available.map((agent) => ({
       label: agent.name,
       description: agent.version || '',
@@ -58,16 +64,40 @@ export class ContextMenuController {
 
     if (!picked) { return; }
 
+    const selectedModel = await this.pickModelIfNeeded(picked.agent);
+
     const prompt = await vscode.window.showInputBox({
       placeHolder: 'Optional prompt (e.g., "Review this file")',
       prompt: 'Enter a prompt to pass to the agent, or leave blank',
     });
 
-    this.launchAgent(picked.agent, contextPaths, prompt || undefined);
+    this.launchAgent(picked.agent, contextPaths, prompt || undefined, workspaceFolder, selectedModel);
   }
 
-  private launchAgent(agent: DetectedAgent, contextPaths: string[], prompt?: string): void {
-    const config = vscode.workspace.getConfiguration('odScanner');
+  private async pickModelIfNeeded(agent: DetectedAgent): Promise<string | undefined> {
+    const models = this.agentService.getModels(agent.id);
+    if (!models || models.length <= 1) {
+      return undefined;
+    }
+    const modelItems = models.map((m) => ({
+      label: m.label || m.id,
+      description: m.id,
+      modelId: m.id,
+    }));
+    const picked = await vscode.window.showQuickPick(modelItems, {
+      placeHolder: `Select a model for ${agent.name}`,
+    });
+    return picked?.modelId;
+  }
+
+  private launchAgent(
+    agent: DetectedAgent,
+    contextPaths: string[],
+    prompt?: string,
+    workspaceFolder?: vscode.WorkspaceFolder,
+    model?: string
+  ): void {
+    const config = vscode.workspace.getConfiguration('odScanner', workspaceFolder?.uri);
     const globalArgs = config.get<string[]>('launchArgs', []);
     const args: string[] = [...globalArgs];
 
@@ -78,7 +108,7 @@ export class ContextMenuController {
       args.push(prompt);
     }
 
-    this.terminalLauncher.spawnWithArgs(agent, args);
+    this.terminalLauncher.spawnWithArgs(agent, args, model, workspaceFolder);
     this.agentService.recordUsage(agent.id);
   }
 

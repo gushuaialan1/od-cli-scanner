@@ -36,10 +36,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TerminalLauncher = void 0;
 const vscode = __importStar(require("vscode"));
 class TerminalLauncher {
-    spawn(agent, prompt) {
+    spawn(agent, prompt, model) {
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath;
         const cwd = workspaceRoot || process.cwd();
-        const command = prompt ? `${agent.bin} "${prompt.replace(/"/g, '\\"')}"` : agent.bin;
+        let command = agent.bin;
+        if (model) {
+            command += ` --model ${model}`;
+        }
+        if (prompt) {
+            command += ` "${prompt.replace(/"/g, '\\"')}"`;
+        }
         const terminal = vscode.window.createTerminal({
             name: `AI: ${agent.name}`,
             cwd,
@@ -47,16 +53,21 @@ class TerminalLauncher {
         terminal.sendText(command);
         terminal.show();
     }
-    spawnWithArgs(agent, args) {
-        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath;
-        const cwd = workspaceRoot || process.cwd();
+    spawnWithArgs(agent, args, model, workspaceFolder) {
+        const cwd = workspaceFolder?.uri.fsPath ?? vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? process.cwd();
+        let command = agent.bin;
+        if (model) {
+            command += ` --model ${model}`;
+        }
         const escapedArgs = args.map((arg) => {
             if (arg.includes(' ') || arg.includes('"')) {
                 return `"${arg.replace(/"/g, '\\"')}"`;
             }
             return arg;
         });
-        const command = escapedArgs.length > 0 ? `${agent.bin} ${escapedArgs.join(' ')}` : agent.bin;
+        if (escapedArgs.length > 0) {
+            command += ` ${escapedArgs.join(' ')}`;
+        }
         const terminal = vscode.window.createTerminal({
             name: `AI: ${agent.name}`,
             cwd,

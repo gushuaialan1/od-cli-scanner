@@ -2,11 +2,12 @@ import * as vscode from 'vscode';
 import { AgentService } from './agentService';
 import { TerminalLauncher } from './terminalLauncher';
 import { ScannerBridge } from './scannerBridge';
-import { DetectedAgent, ScannerError } from './types';
+import { DetectedAgent } from './types';
 
 export class StatusBarController {
   private statusBarItem: vscode.StatusBarItem;
   private disposables: vscode.Disposable[] = [];
+  private nextRefreshTime: number | undefined;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -21,30 +22,38 @@ export class StatusBarController {
     this.statusBarItem.command = 'odScanner.statusBarClicked';
     this.context.subscriptions.push(this.statusBarItem);
 
-    // Register the click handler command
     const clickCmd = vscode.commands.registerCommand(
       'odScanner.statusBarClicked',
       () => this.showMenu()
     );
     this.context.subscriptions.push(clickCmd);
 
-    // Listen to agent changes
     this.disposables.push(
       { dispose: this.agentService.onChange(() => this.refresh()) }
     );
+  }
+
+  setNextRefreshTime(timestamp: number | undefined): void {
+    this.nextRefreshTime = timestamp;
   }
 
   refresh(): void {
     const available = this.agentService.getAvailable();
     const count = available.length;
 
+    let tooltip = '';
+    if (this.nextRefreshTime) {
+      const remaining = Math.max(0, Math.ceil((this.nextRefreshTime - Date.now()) / 1000));
+      tooltip = `Next refresh in ${remaining}s\n`;
+    }
+
     if (count === 0) {
       this.statusBarItem.text = '$(robot) Install \u2192';
-      this.statusBarItem.tooltip = 'No AI agents detected. Click to install.';
+      this.statusBarItem.tooltip = tooltip + 'No AI agents detected. Click to install.';
       this.statusBarItem.command = 'odScanner.statusBarClicked';
     } else {
       this.statusBarItem.text = `$(robot) ${count}`;
-      this.statusBarItem.tooltip = `${count} AI agent${count > 1 ? 's' : ''} available. Click to launch.`;
+      this.statusBarItem.tooltip = tooltip + `${count} AI agent${count > 1 ? 's' : ''} available. Click to launch.`;
       this.statusBarItem.command = 'odScanner.statusBarClicked';
     }
     this.statusBarItem.show();
@@ -89,7 +98,6 @@ export class StatusBarController {
       return;
     }
 
-    // Use recent-first ordering
     const sortedAgents = this.agentService.getRecentAgents();
     const items: Array<{ label: string; description: string; detail: string; agent?: DetectedAgent; action?: string }> = sortedAgents.map((agent) => ({
       label: `$(play) ${agent.name}`,
@@ -157,9 +165,26 @@ export class StatusBarController {
     }
 
     if (picked.agent) {
-      this.terminalLauncher.spawn(picked.agent);
+      const selectedModel = await this.pickModelIfNeeded(picked.agent);
+      this.terminalLauncher.spawn(picked.agent, undefined, selectedModel);
       this.agentService.recordUsage(picked.agent.id);
     }
+  }
+
+  private async pickModelIfNeeded(agent: DetectedAgent): Promise<string | undefined> {
+    const models = this.agentService.getModels(agent.id);
+    if (!models || models.length <= 1) {
+      return undefined;
+    }
+    const modelItems = models.map((m) => ({
+      label: m.label || m.id,
+      description: m.id,
+      modelId: m.id,
+    }));
+    const picked = await vscode.window.showQuickPick(modelItems, {
+      placeHolder: `Select a model for ${agent.name}`,
+    });
+    return picked?.modelId;
   }
 
   dispose(): void {

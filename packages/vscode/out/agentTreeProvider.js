@@ -52,7 +52,33 @@ class AgentTreeProvider {
         if (element) {
             return [];
         }
-        const agents = this.agentService.getAll();
+        const folders = vscode.workspace.workspaceFolders;
+        if (!folders || folders.length === 0) {
+            const agents = this.agentService.getAll();
+            if (agents.length === 0) {
+                return [
+                    new AgentTreeItem('No agents detected', vscode.TreeItemCollapsibleState.None, { tooltip: 'Run a scan to detect agents', icon: 'warning' }),
+                ];
+            }
+            return this.buildAgentItems(agents);
+        }
+        // Multi-workspace: group by folder
+        if (folders.length === 1) {
+            const agents = this.agentService.getAll();
+            return this.buildAgentItems(agents);
+        }
+        // Multiple workspace folders: create folder nodes
+        return folders.map((folder) => {
+            const label = folder.name;
+            const item = new AgentTreeItem(label, vscode.TreeItemCollapsibleState.Collapsed, {
+                tooltip: `Workspace: ${folder.uri.fsPath}`,
+                icon: 'folder',
+            });
+            item.id = `folder:${folder.uri.fsPath}`;
+            return item;
+        });
+    }
+    buildAgentItems(agents) {
         if (agents.length === 0) {
             return [
                 new AgentTreeItem('No agents detected', vscode.TreeItemCollapsibleState.None, { tooltip: 'Run a scan to detect agents', icon: 'warning' }),
@@ -75,6 +101,9 @@ class AgentTreeProvider {
             tooltip.appendMarkdown(`- **Version**: ${agent.version || 'N/A'}\n`);
             tooltip.appendMarkdown(`- **Available**: ${agent.available ? 'Yes' : 'No'}\n`);
             tooltip.appendMarkdown(`- **Auth**: ${agent.auth_status || 'N/A'}\n`);
+            if (agent.models && agent.models.length > 0) {
+                tooltip.appendMarkdown(`- **Models**: ${agent.models.map((m) => m.label || m.id).join(', ')}\n`);
+            }
             if (agent.capabilities && agent.capabilities.length > 0) {
                 tooltip.appendMarkdown(`- **Capabilities**: ${agent.capabilities.join(', ')}\n`);
             }

@@ -43,7 +43,7 @@ class ScannerBridge {
     constructor(outputChannel) {
         this.outputChannel = outputChannel;
     }
-    async scan() {
+    async scan(cwd) {
         const binaryPath = this.resolveBinaryPath();
         if (!binaryPath) {
             throw new types_1.ScannerError('BINARY_NOT_FOUND', 'od-scan binary not found. Install od-cli-scanner or set odScanner.binaryPath.');
@@ -52,6 +52,7 @@ class ScannerBridge {
             const proc = (0, child_process_1.spawn)(binaryPath, ['--format', 'json'], {
                 env: { ...process.env },
                 timeout: SCAN_TIMEOUT_MS,
+                cwd,
             });
             let stdout = '';
             let stderr = '';

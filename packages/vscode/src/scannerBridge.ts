@@ -7,7 +7,7 @@ const SCAN_TIMEOUT_MS = 8000; // 8s hard cap (PRD says < 3s ideally)
 export class ScannerBridge {
   constructor(private outputChannel: vscode.OutputChannel) {}
 
-  async scan(): Promise<DetectedAgent[]> {
+  async scan(cwd?: string): Promise<DetectedAgent[]> {
     const binaryPath = this.resolveBinaryPath();
     if (!binaryPath) {
       throw new ScannerError(
@@ -20,6 +20,7 @@ export class ScannerBridge {
       const proc = spawn(binaryPath, ['--format', 'json'], {
         env: { ...process.env },
         timeout: SCAN_TIMEOUT_MS,
+        cwd,
       });
 
       let stdout = '';

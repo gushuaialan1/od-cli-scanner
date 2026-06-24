@@ -17,6 +17,7 @@ let agentTreeProvider: AgentTreeProvider;
 let terminalLauncher: TerminalLauncher;
 let outputChannel: vscode.OutputChannel;
 let refreshTimer: NodeJS.Timeout | undefined;
+let isPaused = false;
 
 export function activate(context: vscode.ExtensionContext): void {
   outputChannel = vscode.window.createOutputChannel('OD Scanner');
@@ -55,10 +56,11 @@ export function activate(context: vscode.ExtensionContext): void {
   // Register launch by id command (used by tree view)
   const launchByIdCmd = vscode.commands.registerCommand(
     'odScanner.launchAgentById',
-    (agentId: string) => {
+    async (agentId: string) => {
       const agent = agentService.getById(agentId);
       if (agent) {
-        terminalLauncher.spawn(agent);
+        const selectedModel = await pickModelIfNeeded(agent);
+        terminalLauncher.spawn(agent, undefined, selectedModel);
         agentService.recordUsage(agentId);
       }
     }
@@ -76,18 +78,21 @@ export function activate(context: vscode.ExtensionContext): void {
   performScan();
 
   // Auto-refresh
-  const config = vscode.workspace.getConfiguration('odScanner');
-  if (config.get<boolean>('autoRefresh', true)) {
-    const intervalSec = config.get<number>('refreshInterval', 60);
-    refreshTimer = setInterval(() => performScan(), intervalSec * 1000);
-  }
+  startAutoRefresh();
 
   // Re-register when configuration changes
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('odScanner')) {
-        restartAutoRefresh(context);
+        restartAutoRefresh();
       }
+    })
+  );
+
+  // Listen for workspace folder changes to refresh tree
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      agentTreeProvider.refresh();
     })
   );
 }
@@ -107,6 +112,7 @@ async function performScan(): Promise<void> {
     const agents = await scannerBridge.scan();
     agentService.update(agents);
     statusBarController?.refresh();
+    agentTreeProvider?.refresh();
   } catch (err) {
     const message = err instanceof ScannerError ? err.message : String(err);
     statusBarController?.setError(message);
@@ -114,14 +120,44 @@ async function performScan(): Promise<void> {
   }
 }
 
-function restartAutoRefresh(context: vscode.ExtensionContext): void {
+function startAutoRefresh(): void {
   if (refreshTimer) {
     clearInterval(refreshTimer);
     refreshTimer = undefined;
   }
   const config = vscode.workspace.getConfiguration('odScanner');
-  if (config.get<boolean>('autoRefresh', true)) {
-    const intervalSec = config.get<number>('refreshInterval', 60);
-    refreshTimer = setInterval(() => performScan(), intervalSec * 1000);
+  if (isPaused || !config.get<boolean>('autoRefresh', true)) {
+    statusBarController?.setNextRefreshTime(undefined);
+    return;
   }
+  const intervalSec = config.get<number>('refreshInterval', 60);
+  const intervalMs = intervalSec * 1000;
+  const nextTime = Date.now() + intervalMs;
+  statusBarController?.setNextRefreshTime(nextTime);
+  refreshTimer = setInterval(() => {
+    if (isPaused) { return; }
+    performScan();
+    const next = Date.now() + intervalMs;
+    statusBarController?.setNextRefreshTime(next);
+  }, intervalMs);
+}
+
+function restartAutoRefresh(): void {
+  startAutoRefresh();
+}
+
+async function pickModelIfNeeded(agent: import('./types').DetectedAgent): Promise<string | undefined> {
+  const models = agentService.getModels(agent.id);
+  if (!models || models.length <= 1) {
+    return undefined;
+  }
+  const modelItems = models.map((m) => ({
+    label: m.label || m.id,
+    description: m.id,
+    modelId: m.id,
+  }));
+  const picked = await vscode.window.showQuickPick(modelItems, {
+    placeHolder: `Select a model for ${agent.name}`,
+  });
+  return picked?.modelId;
 }
