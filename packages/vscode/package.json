@@ -109,6 +109,13 @@
           "name": "AI Agents",
           "when": "true"
         }
+      ],
+      "chatExplorer": [
+        {
+          "id": "odScanner.chatTerminal",
+          "name": "Chat Terminals",
+          "when": "odScanner.loaded"
+        }
       ]
     },
     "menus": {
@@ -149,5 +156,10 @@
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
     "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "node-pty": "^1.0.0"
   }
 }

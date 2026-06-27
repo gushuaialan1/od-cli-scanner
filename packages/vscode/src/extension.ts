@@ -6,6 +6,7 @@ import { CommandController } from './commandController';
 import { ContextMenuController } from './contextMenuController';
 import { AgentTreeProvider } from './agentTreeProvider';
 import { TerminalLauncher } from './terminalLauncher';
+import { ChatTerminalPanel } from './chatTerminalPanel';
 import { ScannerError } from './types';
 
 let agentService: AgentService;
@@ -53,6 +54,14 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   context.subscriptions.push(treeView);
 
+  // Chat terminal panel
+  const chatTerminalPanel = new ChatTerminalPanel(context, agentService);
+  const chatView = vscode.window.registerWebviewViewProvider(
+    'odScanner.chatTerminal',
+    chatTerminalPanel
+  );
+  context.subscriptions.push(chatView);
+
   // Register launch by id command (used by tree view)
   const launchByIdCmd = vscode.commands.registerCommand(
     'odScanner.launchAgentById',
@@ -76,6 +85,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Initial scan
   performScan();
+  vscode.commands.executeCommand('setContext', 'odScanner.loaded', true);
 
   // Auto-refresh
   startAutoRefresh();
