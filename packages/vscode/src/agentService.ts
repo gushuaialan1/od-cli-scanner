@@ -10,10 +10,16 @@ export class AgentService {
   private listeners: Set<() => void> = new Set();
   private recentIds: string[] = [];
   private globalState: vscode.Memento | undefined;
+  private seenAgents: string[] = [];
+  private customAgents: string[] = [];
+  private readonly SEEN_AGENTS_KEY = 'odScanner.seenAgents';
+  private readonly CUSTOM_AGENTS_KEY = 'odScanner.customAgents';
 
   bindContext(context: vscode.ExtensionContext): void {
     this.globalState = context.globalState;
     this.recentIds = context.globalState.get<string[]>(RECENT_AGENTS_KEY, []);
+    this.seenAgents = context.globalState.get<string[]>(this.SEEN_AGENTS_KEY, []);
+    this.customAgents = context.globalState.get<string[]>(this.CUSTOM_AGENTS_KEY, []);
   }
 
   update(agents: DetectedAgent[]): void {
@@ -79,6 +85,46 @@ export class AgentService {
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  /**
+   * Get agents that were detected but not yet seen/registered by the user.
+   */
+  getNewAgents(allDetected: DetectedAgent[]): DetectedAgent[] {
+    return allDetected.filter(a => !this.seenAgents.includes(a.id));
+  }
+
+  /**
+   * Mark agents as seen. Called when user dismisses notification or adds an agent.
+   */
+  markAsSeen(agentIds: string[]): void {
+    for (const id of agentIds) {
+      if (!this.seenAgents.includes(id)) {
+        this.seenAgents.push(id);
+      }
+    }
+    if (this.globalState) {
+      this.globalState.update(this.SEEN_AGENTS_KEY, this.seenAgents);
+    }
+  }
+
+  /**
+   * Add a custom agent to the user's persisted list.
+   */
+  addCustomAgent(agentId: string): void {
+    if (!this.customAgents.includes(agentId)) {
+      this.customAgents.push(agentId);
+      if (this.globalState) {
+        this.globalState.update(this.CUSTOM_AGENTS_KEY, this.customAgents);
+      }
+    }
+  }
+
+  /**
+   * Check if an agent is a custom (user-added) one.
+   */
+  isCustomAgent(agentId: string): boolean {
+    return this.customAgents.includes(agentId);
   }
 
   private notify(): void {
