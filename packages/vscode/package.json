@@ -3,14 +3,17 @@
   "displayName": "OD Scanner — AI Agent Launcher",
   "description": "Detect & launch local AI coding agents inside VS Code — one click, zero friction.",
   "version": "0.1.0",
-  "publisher": "open-design",
+  "publisher": "gushuaialan1",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gushuaialan1/od-cli-scanner"
+  },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.80.0"
   },
   "categories": [
-    "Machine Learning",
-    "Debuggers",
+    "Programming Languages",
     "Other"
   ],
   "keywords": [
@@ -154,7 +157,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.80.0",
     "typescript": "^5.3.0"
   },
   "dependencies": {
