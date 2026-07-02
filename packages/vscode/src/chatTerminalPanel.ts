@@ -6,6 +6,7 @@ export class ChatTerminalPanel {
   private webviewView: vscode.WebviewView | undefined;
   private sessionManager: TerminalSessionManager;
   private extensionUri: vscode.Uri;
+  private agentChangeListener: (() => void) | undefined;
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -43,13 +44,29 @@ export class ChatTerminalPanel {
         case 'kill':
           this.sessionManager.kill(message.sessionId);
           break;
+        case 'focus':
+          this.focusTerminal(message.sessionId);
+          break;
       }
     });
 
-    // Populate agent selector on resolve
+    // Listen for agent list changes (scan results updated)
+    this.agentChangeListener = this.agentService.onChange(() => {
+      this.populateAgentSelector();
+    });
+
+    // Populate agent selector
+    this.populateAgentSelector();
+    this.syncSessionsToWebview();
+  }
+
+  private populateAgentSelector(): void {
+    if (!this.webviewView) return;
     const available = this.agentService.getAvailable();
-    const items = available.map(a => `<option value="${a.id}">${a.name} (${a.version || 'latest'})</option>`).join('');
-    webviewView.webview.postMessage({ type: 'populateAgents', agents: items });
+    const items = available.map(a =>
+      `<option value="${a.id}">${a.name}${a.version ? ' (' + a.version + ')' : ''}</option>`
+    ).join('');
+    this.webviewView.webview.postMessage({ type: 'populateAgents', agents: items });
   }
 
   private async handleSpawn(agentId: string): Promise<void> {
@@ -80,7 +97,20 @@ export class ChatTerminalPanel {
     });
   }
 
+  private focusTerminal(sessionId: string): void {
+    // Focus the webview to receive keyboard events
+    if (this.webviewView) {
+      this.webviewView.webview.postMessage({ type: 'focus', sessionId });
+    }
+  }
+
   private getHtml(): string {
+    const termJsUri = this.webviewView!.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@xterm', 'xterm', 'lib', 'xterm.js')
+    );
+    const fitJsUri = this.webviewView!.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@xterm', 'addon-fit', 'lib', 'addon-fit.js')
+    );
     const termCssUri = this.webviewView!.webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'media', 'xterm.css')
     );
@@ -128,14 +158,15 @@ export class ChatTerminalPanel {
     <select id="agent-select"><option value="">Select an agent...</option></select>
     <button id="btn-launch">Launch</button>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
+  <script src="${termJsUri}"></script>
+  <script src="${fitJsUri}"></script>
   <script>
     const vscode = acquireVsCodeApi();
     const { Terminal } = window.Terminal;
     const { FitAddon } = window.FitAddon;
     const fitAddon = new FitAddon();
     const terminals = new Map();
+    let activeSessionId = null;
 
     window.addEventListener('message', event => {
       const msg = event.data;
@@ -144,6 +175,8 @@ export class ChatTerminalPanel {
         sel.innerHTML = '<option value="">Select an agent...</option>' + msg.agents;
       } else if (msg.type === 'sessionsUpdated') {
         renderSessions(msg.sessions, msg.layout);
+      } else if (msg.type === 'focus') {
+        focusTerminal(msg.sessionId);
       }
     });
 
@@ -182,10 +215,27 @@ export class ChatTerminalPanel {
           vscode.postMessage({ type: 'input', sessionId: s.id, data: data });
         });
 
-        setTimeout(() => fitAddon.fit(), 50);
+        term.onFocus(() => {
+          activeSessionId = s.id;
+          vscode.postMessage({ type: 'focus', sessionId: s.id });
+        });
+
+        setTimeout(() => {
+          fitAddon.fit();
+          term.focus();
+          activeSessionId = s.id;
+        }, 50);
       });
 
       document.getElementById('session-count').textContent = sessions.length + '/4';
+    }
+
+    function focusTerminal(sessionId) {
+      const entry = terminals.get(sessionId);
+      if (entry) {
+        entry.term.focus();
+        activeSessionId = sessionId;
+      }
     }
 
     document.getElementById('btn-add').addEventListener('click', () => {
@@ -201,6 +251,23 @@ export class ChatTerminalPanel {
         vscode.postMessage({ type: 'spawn', agentId: sel.value });
       }
     });
+
+    // Ctrl+Tab: cycle through terminals
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+        e.preventDefault();
+        const sessionIds = Array.from(terminals.keys());
+        if (sessionIds.length === 0) return;
+        let idx = sessionIds.indexOf(activeSessionId);
+        idx = (idx + 1) % sessionIds.length;
+        activeSessionId = sessionIds[idx];
+        const entry = terminals.get(activeSessionId);
+        if (entry) {
+          entry.term.focus();
+          vscode.postMessage({ type: 'focus', sessionId: activeSessionId });
+        }
+      }
+    });
   </script>
 </body>
 </html>`;
@@ -211,6 +278,9 @@ export class ChatTerminalPanel {
   }
 
   dispose(): void {
+    if (this.agentChangeListener) {
+      this.agentChangeListener();
+    }
     this.sessionManager.dispose();
   }
 }
