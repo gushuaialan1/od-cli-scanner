@@ -74,6 +74,16 @@ export class ChatTerminalPanel {
     if (!agent) return;
     try {
       const sessionId = this.sessionManager.spawn(agent);
+      // Register data callback to forward PTY output to webview
+      this.sessionManager.onData(sessionId, (data: string) => {
+        if (this.webviewView) {
+          this.webviewView.webview.postMessage({
+            type: 'terminalData',
+            sessionId,
+            data,
+          });
+        }
+      });
       this.syncSessionsToWebview();
     } catch (err) {
       vscode.window.showErrorMessage(String(err));
@@ -175,6 +185,11 @@ export class ChatTerminalPanel {
         sel.innerHTML = '<option value="">Select an agent...</option>' + msg.agents;
       } else if (msg.type === 'sessionsUpdated') {
         renderSessions(msg.sessions, msg.layout);
+      } else if (msg.type === 'terminalData') {
+        const entry = terminals.get(msg.sessionId);
+        if (entry) {
+          entry.term.write(msg.data);
+        }
       } else if (msg.type === 'focus') {
         focusTerminal(msg.sessionId);
       }

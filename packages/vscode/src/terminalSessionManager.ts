@@ -13,6 +13,7 @@ export interface TerminalSession {
 export class TerminalSessionManager {
   private sessions: Map<string, TerminalSession> = new Map();
   private onSessionChangeCallbacks: (() => void)[] = [];
+  private onDataCallbacks: Map<string, (data: string) => void> = new Map();
 
   onSessionChange(cb: () => void): void {
     this.onSessionChangeCallbacks.push(cb);
@@ -45,7 +46,11 @@ export class TerminalSessionManager {
     const command = agent.bin + modelArg + '\n';
     ptyProcess.write(command);
 
-    ptyProcess.onData(() => {
+    ptyProcess.onData((data: string) => {
+      const callback = this.onDataCallbacks.get(id);
+      if (callback) {
+        callback(data);
+      }
       this.notify();
     });
 
@@ -97,5 +102,13 @@ export class TerminalSessionManager {
       session.ptyProcess.kill();
     }
     this.sessions.clear();
+    this.onDataCallbacks.clear();
+  }
+
+  /**
+   * Register a callback for PTY output data from a session.
+   */
+  onData(sessionId: string, callback: (data: string) => void): void {
+    this.onDataCallbacks.set(sessionId, callback);
   }
 }
