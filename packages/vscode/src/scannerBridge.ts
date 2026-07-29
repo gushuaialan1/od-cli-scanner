@@ -21,10 +21,16 @@ export class ScannerBridge {
       // it corrupts node-based child processes spawned downstream (agent probes)
       const env = { ...process.env };
       delete env.ELECTRON_RUN_AS_NODE;
+      const startedAt = Date.now();
+      this.outputChannel.appendLine(`[scan] spawning ${binaryPath}`);
       const proc = spawn(binaryPath, ['--format', 'json'], {
         env,
         timeout: SCAN_TIMEOUT_MS,
         cwd,
+        // stdin must be 'ignore': an open pipe can hang Windows .cmd shims
+        // whose child processes inherit and block on it
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
       });
 
       let stdout = '';
@@ -61,6 +67,9 @@ export class ScannerBridge {
       proc.on('close', (code) => {
         clearTimeout(timer);
         if (killed) return;
+        this.outputChannel.appendLine(
+          `[scan] od-scan exited code=${code} in ${Date.now() - startedAt}ms`
+        );
 
         if (code !== 0) {
           this.outputChannel.appendLine(
