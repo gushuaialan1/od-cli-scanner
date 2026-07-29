@@ -88,6 +88,10 @@ fn load_manifest() -> Manifest {
 /// Create a temp dir populated with executable copies of the given fixture
 /// binaries, and return (tempdir, EnvGuard) with PATH already rewritten to
 /// contain only that temp dir. Both must be kept alive for the test.
+///
+/// Unix-only: the fixture binaries are POSIX shell scripts, so executing
+/// them only works on unix hosts.
+#[cfg(unix)]
 fn with_fake_path(bins: &[&str]) -> (tempfile::TempDir, EnvGuard) {
     let tmp = tempfile::tempdir().unwrap();
     let src_dir = fixtures_dir().join("bin");
@@ -105,6 +109,9 @@ fn with_fake_path(bins: &[&str]) -> (tempfile::TempDir, EnvGuard) {
 
 /// Sanity check: each mock fixture responds to `--version` with the exact
 /// output declared in the manifest, and exits 1 on unknown args.
+///
+/// Unix-only: executing the POSIX shell-script fixtures requires a shell.
+#[cfg(unix)]
 #[test]
 #[serial]
 fn fixtures_match_manifest() {
@@ -140,6 +147,9 @@ fn fixtures_match_manifest() {
 
 /// Scenario 1: PATH contains only the 4 mock CLIs → all 4 agents are
 /// detected as available with versions matching the manifest.
+///
+/// Unix-only: detection executes the POSIX shell-script fixtures.
+#[cfg(unix)]
 #[tokio::test]
 #[serial]
 async fn detects_all_mock_agents_with_expected_versions() {
@@ -177,6 +187,36 @@ async fn detects_all_mock_agents_with_expected_versions() {
             "{} should have no diagnostics: {:?}",
             expected.id,
             detected.diagnostics
+        );
+    }
+}
+
+/// Declarative check (cross-platform): the manifest parses, defines exactly
+/// the 4 registry agents, every fixture file exists, and each entry is
+/// internally consistent. Runs on all platforms because it never executes
+/// the shell-script fixtures.
+#[test]
+fn manifest_is_well_formed() {
+    let manifest = load_manifest();
+    assert_eq!(manifest.agents.len(), 4, "manifest should define 4 agents");
+
+    let registry = AgentRegistry::new();
+    for agent in &manifest.agents {
+        assert!(!agent.id.is_empty(), "agent id must not be empty");
+        assert!(
+            registry.get(&agent.id).is_some(),
+            "manifest agent {} missing from registry",
+            agent.id
+        );
+        assert!(
+            fixtures_dir().join("bin").join(&agent.bin).exists(),
+            "missing fixture binary for {}",
+            agent.id
+        );
+        assert!(
+            agent.version_output.contains(&agent.expected_version),
+            "{} version_output should contain expected_version",
+            agent.id
         );
     }
 }
