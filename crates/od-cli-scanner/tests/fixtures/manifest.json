@@ -1,0 +1,28 @@
+{
+  "agents": [
+    {
+      "id": "claude",
+      "bin": "claude",
+      "version_output": "claude-code 1.0.62 (Claude Code)",
+      "expected_version": "1.0.62"
+    },
+    {
+      "id": "codex",
+      "bin": "codex",
+      "version_output": "codex-cli 0.5.0",
+      "expected_version": "0.5.0"
+    },
+    {
+      "id": "gemini",
+      "bin": "gemini",
+      "version_output": "0.1.9",
+      "expected_version": "0.1.9"
+    },
+    {
+      "id": "kimi",
+      "bin": "kimi",
+      "version_output": "kimi 0.3.0",
+      "expected_version": "0.3.0"
+    }
+  ]
+}

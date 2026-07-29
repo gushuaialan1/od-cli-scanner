@@ -1,0 +1,7 @@
+#!/bin/sh
+# Mock gemini CLI fixture for integration tests.
+if [ "$1" = "--version" ]; then
+    echo "0.1.9"
+    exit 0
+fi
+exit 1
