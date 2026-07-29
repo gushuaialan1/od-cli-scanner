@@ -43,6 +43,7 @@ const commandController_1 = require("./commandController");
 const contextMenuController_1 = require("./contextMenuController");
 const agentTreeProvider_1 = require("./agentTreeProvider");
 const terminalLauncher_1 = require("./terminalLauncher");
+const chatTerminalPanel_1 = require("./chatTerminalPanel");
 const types_1 = require("./types");
 let agentService;
 let scannerBridge;
@@ -70,6 +71,10 @@ function activate(context) {
         treeDataProvider: agentTreeProvider,
     });
     context.subscriptions.push(treeView);
+    // Chat terminal panel
+    const chatTerminalPanel = new chatTerminalPanel_1.ChatTerminalPanel(context, agentService);
+    const chatView = vscode.window.registerWebviewViewProvider('odScanner.chatTerminal', chatTerminalPanel);
+    context.subscriptions.push(chatView);
     // Register launch by id command (used by tree view)
     const launchByIdCmd = vscode.commands.registerCommand('odScanner.launchAgentById', async (agentId) => {
         const agent = agentService.getById(agentId);
@@ -83,8 +88,46 @@ function activate(context) {
     // Refresh tree view command
     const refreshTreeCmd = vscode.commands.registerCommand('odScanner.refreshTreeView', () => agentTreeProvider.refresh());
     context.subscriptions.push(refreshTreeCmd);
+    // Register new agents command
+    const showNewAgentsCmd = vscode.commands.registerCommand('odScanner.showNewAgents', () => {
+        const allAgents = agentService.getAll();
+        const newAgents = agentService.getNewAgents(allAgents);
+        if (newAgents.length === 0) {
+            vscode.window.showInformationMessage('No new agents detected.');
+            return;
+        }
+        const items = newAgents.map(a => ({
+            label: a.name,
+            description: a.bin,
+            detail: a.version || 'No version detected',
+            agent: a,
+        }));
+        vscode.window.showQuickPick(items, {
+            placeHolder: 'Select agents to add',
+            matchOnDescription: true,
+        }).then(selected => {
+            if (selected && 'agent' in selected && selected.agent) {
+                agentService.addCustomAgent(selected.agent.id);
+                agentService.markAsSeen([selected.agent.id]);
+                vscode.window.showInformationMessage(`Added ${selected.agent.name}`);
+            }
+        });
+    });
+    context.subscriptions.push(showNewAgentsCmd);
     // Initial scan
     performScan();
+    vscode.commands.executeCommand('setContext', 'odScanner.loaded', true);
+    // New agents notification
+    const newAgents = agentService.getNewAgents(agentService.getAll());
+    if (newAgents.length > 0) {
+        const agentNames = newAgents.map(a => a.name).join(', ');
+        vscode.window.showInformationMessage(`New agents detected: ${agentNames}`, 'View & Add').then(selection => {
+            if (selection === 'View & Add') {
+                vscode.commands.executeCommand('odScanner.showNewAgents');
+            }
+        });
+        agentService.markAsSeen(newAgents.map(a => a.id));
+    }
     // Auto-refresh
     startAutoRefresh();
     // Re-register when configuration changes
