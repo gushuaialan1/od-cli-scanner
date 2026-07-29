@@ -51,7 +51,9 @@ pub fn spawn_agent(
             use std::io::ErrorKind;
             match e.kind() {
                 ErrorKind::NotFound => Err(SpawnError::NotFound(bin_path.to_path_buf())),
-                ErrorKind::PermissionDenied => Err(SpawnError::PermissionDenied(bin_path.to_path_buf())),
+                ErrorKind::PermissionDenied => {
+                    Err(SpawnError::PermissionDenied(bin_path.to_path_buf()))
+                }
                 _ => Err(SpawnError::Io(e)),
             }
         }
@@ -114,7 +116,9 @@ impl AgentLauncher {
                     use std::io::ErrorKind;
                     match e.kind() {
                         ErrorKind::NotFound => Err(SpawnError::NotFound(bin_path.to_path_buf())),
-                        ErrorKind::PermissionDenied => Err(SpawnError::PermissionDenied(bin_path.to_path_buf())),
+                        ErrorKind::PermissionDenied => {
+                            Err(SpawnError::PermissionDenied(bin_path.to_path_buf()))
+                        }
                         _ => Err(SpawnError::Io(e)),
                     }
                 }
@@ -155,7 +159,9 @@ mod tests {
             // Try alternative paths
             let alt = Path::new("/usr/bin/echo");
             if !alt.exists() {
-                eprintln!("Skipping spawn_agent_echo: echo not found at /bin/echo or /usr/bin/echo");
+                eprintln!(
+                    "Skipping spawn_agent_echo: echo not found at /bin/echo or /usr/bin/echo"
+                );
                 return Ok(());
             }
         }
@@ -166,7 +172,10 @@ mod tests {
         let stdout = child.stdout.take().expect("stdout should be piped");
         let mut reader = tokio::io::BufReader::new(stdout);
         let mut buf = String::new();
-        reader.read_to_string(&mut buf).await.expect("read should succeed");
+        reader
+            .read_to_string(&mut buf)
+            .await
+            .expect("read should succeed");
 
         let status = child.wait().await.expect("wait should succeed");
         assert!(status.success(), "echo should exit successfully");
@@ -195,11 +204,17 @@ mod tests {
         let stdout = child.stdout.take().expect("stdout should be piped");
         let mut reader = tokio::io::BufReader::new(stdout);
         let mut buf = String::new();
-        reader.read_to_string(&mut buf).await.expect("read should succeed");
+        reader
+            .read_to_string(&mut buf)
+            .await
+            .expect("read should succeed");
 
         let status = child.wait().await.expect("wait should succeed");
         assert!(status.success(), "shell should exit successfully");
-        assert!(buf.contains("od_value_42"), "output should contain injected env var value");
+        assert!(
+            buf.contains("od_value_42"),
+            "output should contain injected env var value"
+        );
         Ok(())
     }
 
@@ -282,12 +297,17 @@ mod tests {
 
         let launcher = AgentLauncher::new();
         let options = LaunchOptions::default();
-        let mut child = launcher.launch(&agent_def, &options).expect("launch should succeed");
+        let mut child = launcher
+            .launch(&agent_def, &options)
+            .expect("launch should succeed");
 
         let stdout = child.stdout.take().expect("stdout should be piped");
         let mut reader = tokio::io::BufReader::new(stdout);
         let mut buf = String::new();
-        reader.read_to_string(&mut buf).await.expect("read should succeed");
+        reader
+            .read_to_string(&mut buf)
+            .await
+            .expect("read should succeed");
 
         let status = child.wait().await.expect("wait should succeed");
         assert!(status.success());

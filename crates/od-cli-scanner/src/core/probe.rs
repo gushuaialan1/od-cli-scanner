@@ -197,11 +197,7 @@ fn parse_models(output: &str) -> Option<Vec<ModelOption>> {
             let mut parts = line.split_whitespace();
             let id = parts.next().unwrap_or(line).to_string();
             let label = parts.collect::<Vec<_>>().join(" ");
-            let label = if label.is_empty() {
-                id.clone()
-            } else {
-                label
-            };
+            let label = if label.is_empty() { id.clone() } else { label };
             ModelOption { id, label }
         })
         .collect();

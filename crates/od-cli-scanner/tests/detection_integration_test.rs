@@ -130,7 +130,11 @@ fn fixtures_match_manifest() {
             .arg("--bogus-flag")
             .output()
             .unwrap();
-        assert!(!bad.status.success(), "{} should exit 1 on bad args", agent.id);
+        assert!(
+            !bad.status.success(),
+            "{} should exit 1 on bad args",
+            agent.id
+        );
     }
 }
 
@@ -198,7 +202,11 @@ async fn missing_mocks_report_unavailable() {
 
     for agent in &result.agents {
         assert!(!agent.available, "{} should be unavailable", agent.id);
-        assert!(agent.version.is_none(), "{} should have no version", agent.id);
+        assert!(
+            agent.version.is_none(),
+            "{} should have no version",
+            agent.id
+        );
         let diags = agent.diagnostics.as_ref().expect("diagnostics expected");
         assert!(
             diags.iter().any(|d| d.kind == "not_on_path"),

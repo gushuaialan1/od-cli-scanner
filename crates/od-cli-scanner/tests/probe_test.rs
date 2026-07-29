@@ -267,7 +267,10 @@ async fn probe_models_parses_json_array() {
 
     let (models, source) = probe_models(
         std::path::Path::new("/bin/sh"),
-        Some(&["-c".to_string(), "echo '[{\"id\":\"gpt-4\",\"label\":\"GPT-4\"}]'".to_string()]),
+        Some(&[
+            "-c".to_string(),
+            "echo '[{\"id\":\"gpt-4\",\"label\":\"GPT-4\"}]'".to_string(),
+        ]),
         5000,
         &fallback,
     )
