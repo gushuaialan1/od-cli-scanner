@@ -2,12 +2,29 @@
 .hermes/
 .vscode/
 .vscode-test/
-out/
-node_modules/
+src/
+tsconfig.json
+vitest.config.ts
+out/test/
+**/*.map
 *.md
 !README.md
-Cargo.toml
-crates/*/Cargo.toml
-crates/*/src/**/*.rs
-*.map
+!LICENSE
 od-scanner-vscode-*.vsix
+
+# node-pty: keep prebuilt binary + JS lib, drop build-time sources
+node_modules/nan/
+# xterm: only the lib/ bundles are served to the webview
+node_modules/@xterm/*/src/
+node_modules/@xterm/*/typings/
+node_modules/node-pty/deps/
+node_modules/node-pty/src/
+node_modules/node-pty/scripts/
+node_modules/node-pty/typings/
+node_modules/node-pty/binding.gyp
+node_modules/node-pty/build/Makefile
+node_modules/node-pty/build/binding.Makefile
+node_modules/node-pty/build/config.gypi
+node_modules/node-pty/build/*.mk
+node_modules/node-pty/build/Release/obj.target/
+node_modules/node-pty/build/Release/.deps/
