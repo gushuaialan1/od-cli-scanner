@@ -21,42 +21,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            arch: x64
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            arch: arm64
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            arch: x64
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            arch: arm64
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            arch: x64
-
+          - { target: x86_64-apple-darwin, os: macos-latest, arch: x64 }
+          - { target: aarch64-apple-darwin, os: macos-latest, arch: arm64 }
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest, arch: x64 }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-latest, arch: arm64 }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest, arch: x64 }
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-
       - uses: Swatinem/rust-cache@v2
-
       - name: Build CLI (native)
         if: matrix.target != 'aarch64-unknown-linux-gnu'
         run: cargo build --release --target ${{ matrix.target }} -p od-scan
-
       - name: Build CLI (cross)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           cargo install cross
           cross build --release --target ${{ matrix.target }} -p od-scan
-
       - name: Package binary
         shell: bash
         run: |
@@ -66,7 +50,6 @@ jobs:
           else
             cp target/${{ matrix.target }}/release/od-scan dist/od-scan-${{ matrix.target }}
           fi
-
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v4
         with:
@@ -81,101 +64,115 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-apple-darwin
-            os: macos-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-
+          - { target: x86_64-apple-darwin, os: macos-latest }
+          - { target: aarch64-apple-darwin, os: macos-latest }
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-latest }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest }
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
-
       - uses: Swatinem/rust-cache@v2
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: Install napi-rs CLI
         run: npm install -g @napi-rs/cli
-
       - name: Build napi (native)
         if: matrix.target != 'aarch64-unknown-linux-gnu'
         run: napi build --platform --release --target ${{ matrix.target }} --package od-cli-scanner-napi -o ./npm
-        working-directory: .
-
       - name: Install zig
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.13.0
-
       - name: Build napi (cross)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           cargo install cargo-zigbuild
           napi build --platform --release --target ${{ matrix.target }} --cross-compile --package od-cli-scanner-napi -o ./npm
-        working-directory: .
-
       - name: Upload napi artifact
         uses: actions/upload-artifact@v4
         with:
           name: napi-${{ matrix.target }}
           path: npm/*.node
 
+  # ─── Package VS Code extension per platform (node-pty native) ────
+  vscode-package:
+    name: vsix ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: linux-x64 }
+          - { os: macos-latest, target: darwin-x64 }
+          - { os: macos-14, target: darwin-arm64 }
+          - { os: windows-latest, target: win32-x64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: packages/vscode/package-lock.json
+      - run: npm ci
+        working-directory: packages/vscode
+      # vscode:prepublish runs `npm run compile` automatically
+      - run: npx vsce package --target ${{ matrix.target }} --out od-scanner-vscode-${{ matrix.target }}.vsix
+        working-directory: packages/vscode
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix-${{ matrix.target }}
+          path: packages/vscode/*.vsix
+
   # ─── Publish npm + cargo + GitHub Release ───────────────────────
   publish:
     name: Publish
-    needs: [build-cli, build-napi]
+    needs: [build-cli, build-napi, vscode-package]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Download CLI binaries
         uses: actions/download-artifact@v4
         with:
           path: dist
           pattern: cli-*
           merge-multiple: true
-
       - name: Download napi prebuilds
         uses: actions/download-artifact@v4
         with:
           path: npm/prebuilds
           pattern: napi-*
           merge-multiple: true
-
+      - name: Download vsix packages
+        uses: actions/download-artifact@v4
+        with:
+          path: vsix
+          pattern: vsix-*
+          merge-multiple: true
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-
       - name: Publish npm
         run: |
           cd npm
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Publish cargo
         run: cargo publish -p od-cli-scanner --token ${{ secrets.CARGO_TOKEN }}
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             dist/**
             npm/prebuilds/**
+            vsix/**
           generate_release_notes: true
