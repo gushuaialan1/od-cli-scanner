@@ -33,12 +33,15 @@ export class TerminalSessionManager {
     const id = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const shell = os.platform() === 'win32' ? 'cmd.exe' : (process.env.SHELL || '/bin/bash');
 
+    // Strip ELECTRON_RUN_AS_NODE so agent CLIs (node shims) run normally
+    const env = { ...process.env } as Record<string, string>;
+    delete env.ELECTRON_RUN_AS_NODE;
     const ptyProcess = pty.spawn(shell, [], {
       name: 'xterm-color',
       cols: 80,
       rows: 30,
       cwd: process.cwd(),
-      env: process.env as any,
+      env: env as any,
     });
 
     // Send agent command to start it

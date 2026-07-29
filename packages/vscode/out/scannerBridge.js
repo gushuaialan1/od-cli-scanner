@@ -49,8 +49,12 @@ class ScannerBridge {
             throw new types_1.ScannerError('BINARY_NOT_FOUND', 'od-scan binary not found. Install od-cli-scanner or set odScanner.binaryPath.');
         }
         return new Promise((resolve, reject) => {
+            // Strip ELECTRON_RUN_AS_NODE: inherited from the VS Code extension host,
+            // it corrupts node-based child processes spawned downstream (agent probes)
+            const env = { ...process.env };
+            delete env.ELECTRON_RUN_AS_NODE;
             const proc = (0, child_process_1.spawn)(binaryPath, ['--format', 'json'], {
-                env: { ...process.env },
+                env,
                 timeout: SCAN_TIMEOUT_MS,
                 cwd,
             });
