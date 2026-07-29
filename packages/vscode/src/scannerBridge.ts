@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { DetectedAgent, ScannerError, ScannerErrorCode } from './types';
 
-const SCAN_TIMEOUT_MS = 8000; // 8s hard cap (PRD says < 3s ideally)
+const SCAN_TIMEOUT_MS = 30000; // 30s hard cap — Windows process spawning is slow (24 agents × --version probes)
 
 export class ScannerBridge {
   constructor(private outputChannel: vscode.OutputChannel) {}
@@ -31,7 +31,7 @@ export class ScannerBridge {
         killed = true;
         proc.kill('SIGTERM');
         reject(
-          new ScannerError('TIMEOUT', 'od-scan timed out after 8s.')
+          new ScannerError('TIMEOUT', 'od-scan timed out after 30s.')
         );
       }, SCAN_TIMEOUT_MS);
 

@@ -37,7 +37,7 @@ exports.ScannerBridge = void 0;
 const vscode = __importStar(require("vscode"));
 const child_process_1 = require("child_process");
 const types_1 = require("./types");
-const SCAN_TIMEOUT_MS = 8000; // 8s hard cap (PRD says < 3s ideally)
+const SCAN_TIMEOUT_MS = 30000; // 30s hard cap — Windows process spawning is slow (24 agents × --version probes)
 class ScannerBridge {
     outputChannel;
     constructor(outputChannel) {
@@ -60,7 +60,7 @@ class ScannerBridge {
             const timer = setTimeout(() => {
                 killed = true;
                 proc.kill('SIGTERM');
-                reject(new types_1.ScannerError('TIMEOUT', 'od-scan timed out after 8s.'));
+                reject(new types_1.ScannerError('TIMEOUT', 'od-scan timed out after 30s.'));
             }, SCAN_TIMEOUT_MS);
             proc.stdout.on('data', (chunk) => {
                 stdout += chunk.toString('utf-8');
@@ -99,15 +99,21 @@ class ScannerBridge {
         if (customPath) {
             return customPath;
         }
-        // Auto-discover from PATH
-        const candidates = ['od-scan'];
+        // Auto-discover from PATH (cross-platform: `where` on Windows, `which` on Unix)
+        const isWin = process.platform === 'win32';
+        const whichCmd = isWin ? 'where' : 'which';
+        const candidates = isWin ? ['od-scan.exe', 'od-scan'] : ['od-scan'];
         for (const c of candidates) {
-            // Simple heuristic: try to resolve via `which` equivalent
             try {
                 const { execSync } = require('child_process');
-                const resolved = execSync(`which ${c}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] });
-                if (resolved) {
-                    return resolved.trim();
+                const resolved = execSync(`${whichCmd} ${c}`, {
+                    encoding: 'utf-8',
+                    stdio: ['pipe', 'pipe', 'ignore'],
+                });
+                // `where` can return multiple matches; take the first line
+                const first = resolved.split(/\r?\n/)[0].trim();
+                if (first) {
+                    return first;
                 }
             }
             catch {
@@ -115,7 +121,9 @@ class ScannerBridge {
             }
         }
         // Fallback: check common local build path
-        const localBuild = `${process.env.HOME}/projects/od-cli-scanner/target/debug/od-scan`;
+        const home = process.env.HOME || process.env.USERPROFILE || '';
+        const binName = isWin ? 'od-scan.exe' : 'od-scan';
+        const localBuild = `${home}/projects/od-cli-scanner/target/debug/${binName}`;
         try {
             const fs = require('fs');
             if (fs.existsSync(localBuild)) {
