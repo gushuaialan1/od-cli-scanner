@@ -2,7 +2,7 @@
   "name": "od-scanner-vscode",
   "displayName": "OD Scanner — AI Agent Launcher",
   "description": "Detect & launch local AI coding agents inside VS Code — one click, zero friction.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "gushuaialan1",
   "license": "MIT",
   "repository": {
