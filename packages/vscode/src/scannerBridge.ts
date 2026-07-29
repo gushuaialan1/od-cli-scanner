@@ -90,22 +90,30 @@ export class ScannerBridge {
     if (customPath) {
       return customPath;
     }
-    // Auto-discover from PATH
-    const candidates = ['od-scan'];
+    // Auto-discover from PATH (cross-platform: `where` on Windows, `which` on Unix)
+    const isWin = process.platform === 'win32';
+    const whichCmd = isWin ? 'where' : 'which';
+    const candidates = isWin ? ['od-scan.exe', 'od-scan'] : ['od-scan'];
     for (const c of candidates) {
-      // Simple heuristic: try to resolve via `which` equivalent
       try {
         const { execSync } = require('child_process');
-        const resolved = execSync(`which ${c}`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] });
-        if (resolved) {
-          return resolved.trim();
+        const resolved = execSync(`${whichCmd} ${c}`, {
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'ignore'],
+        });
+        // `where` can return multiple matches; take the first line
+        const first = resolved.split(/\r?\n/)[0].trim();
+        if (first) {
+          return first;
         }
       } catch {
         // ignore
       }
     }
     // Fallback: check common local build path
-    const localBuild = `${process.env.HOME}/projects/od-cli-scanner/target/debug/od-scan`;
+    const home = process.env.HOME || process.env.USERPROFILE || '';
+    const binName = isWin ? 'od-scan.exe' : 'od-scan';
+    const localBuild = `${home}/projects/od-cli-scanner/target/debug/${binName}`;
     try {
       const fs = require('fs');
       if (fs.existsSync(localBuild)) {
